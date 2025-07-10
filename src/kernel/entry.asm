@@ -25,9 +25,9 @@ PAGE_TABLE_768  equ 0x82000 ; 768th page table. Address must be 4KB aligned
 PAGE_FLAGS      equ 0x03 ; attributes (page is present;page is writable; supervisor mode)
 PAGE_ENTRIES    equ 1024 ; each page table has 1024 entries
 
-section .stack nobits alloc noexec write align=4
+section .stack nobits alloc noexec write align=4    ; the stack won't take space in the executable file
 stack_bottom:
-    resb 0x10000
+    resb 0x1000
 stack_top:
 
 section .entry
@@ -103,7 +103,7 @@ entry:
 section .text
 higher_half:
 
-    push edx
+    push edx    ; boot_info struct from the bootloader
     call start
 
     cli

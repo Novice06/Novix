@@ -21,13 +21,11 @@ SOURCES_C =	$(wildcard *.c) \
 			$(wildcard */*.c) \
 			$(wildcard */*/*.c) \
 			$(wildcard */*/*/*.c) \
-			hal/isrs_gen.c
 
 HEADERS_ASM = $(wildcard *.inc) \
 			  $(wildcard */*.inc) \
 			  $(wildcard */*/*.inc) \
 			  $(wildcard */*/*/*.inc) \
-			  hal/isrs_gen.inc
 
 SOURCES_ASM =  $(wildcard *.asm) \
 			  $(wildcard */*.asm) \
@@ -43,16 +41,7 @@ LIB_OBJECT =	$(wildcard $(BUILD_DIR)/lib/*.obj) \
 			$(wildcard $(BUILD_DIR)/lib/*/*/*.obj) \
 			$(wildcard $(BUILD_DIR)/lib/*/*/*/*.obj) \
 
-kernel: isr_generator $(BUILD_DIR)/kernel.bin
-
-isr_generator: hal/isrs_gen.c hal/isrs_gen.inc
-	@sed -i 's/\r//' isr_generator.sh
-	@./isr_generator.sh hal/isrs_gen.c hal/isrs_gen.inc
-	@echo "--> Generating: hal/isrs_gen.c hal/isrs_gen.inc"
-
-$(BUILD_DIR)/kernel.bin: $(OBJECTS_ASM) $(OBJECTS_C)
-	@$(LD) $(LDFLAG) -o $@ $^ $(LIB_OBJECT) -lgcc -Map $(BUILD_DIR)/kernel.map
-	@echo "--> Created:  kernel.bin"
+kernel: $(BUILD_DIR)/kernel.bin
 
 $(BUILD_DIR)/kernel/c/%.obj: %.c $(HEADERS_C)
 	@mkdir -p $(@D)
@@ -63,3 +52,7 @@ $(BUILD_DIR)/kernel/asm/%.obj: %.asm $(HEADERS_ASM)
 	@mkdir -p $(@D)
 	@$(ASM) $(ASMFLAGS) -o $@ $<
 	@echo "--> Compiled: " $<
+
+$(BUILD_DIR)/kernel.bin: $(OBJECTS_ASM) $(OBJECTS_C)
+	@$(LD) $(LDFLAG) -o $@ $^ $(LIB_OBJECT) -lgcc -Map $(BUILD_DIR)/kernel.map
+	@echo "--> Created:  kernel.bin"
