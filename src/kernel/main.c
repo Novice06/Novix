@@ -18,6 +18,7 @@
 */
 
 #include <boot_info.h>
+#include <debug.h>
 
 const char logo[] = 
 "\
@@ -35,8 +36,7 @@ const char logo[] =
 
 void __attribute__((cdecl)) start(Boot_info* info)
 {
-    uint16_t* vga = (uint16_t*)0xB8000;
-    
-    *vga = 'a' | (7 << 8) | (0 << 12);;
+    log_info("kernel", "the Kernel is running");
+    printf("hello world !");
     for(;;);
 }
