@@ -1,6 +1,10 @@
 #include <debug.h>
 #include <stdio.h>
 
+//============================================================================
+//    IMPLEMENTATION PRIVATE DATA
+//============================================================================
+
 static const char* const g_LogSeverityColors[] =
 {
     [LVL_DEBUG]        = "\033[2;37m",
@@ -11,6 +15,10 @@ static const char* const g_LogSeverityColors[] =
 };
 
 static const char* const g_ColorReset = "\033[0m";
+
+//============================================================================
+//    INTERFACE FUNCTIONS
+//============================================================================
 
 void logf(const char* module, DebugLevel level, const char* fmt, ...)
 {

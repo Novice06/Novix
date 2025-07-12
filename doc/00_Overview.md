@@ -108,3 +108,11 @@ This is handled in the `entry.asm` file, which performs the following steps:
    * Once paging is active, the stack is initialized.
    * A jump is made to a label in the `.text` section, which is now executing from the higher-half virtual address space.
    * Control is transferred to the `start` function, which is the actual C-level kernel entry point.
+
+### Starting the Kernel
+
+Once paging is enabled and control is transferred to the higher-half, execution continues in the `start` function, which serves as the kernel's true entry point.
+
+At this stage, the kernel begins its initialization phase by calling the function `HAL_initialize()`. This function sets up key low-level components such as the Global Descriptor Table (GDT), the Interrupt Descriptor Table (IDT), and other hardware abstraction routines required for the kernel to run safely.
+
+More details about what happens inside `HAL_initialize()` can be found in the dedicated document: 📄 [01_HAL_initialize.md](01_HAL_initialize.md)

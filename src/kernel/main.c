@@ -19,6 +19,10 @@
 
 #include <boot_info.h>
 #include <debug.h>
+#include <stdint.h>
+#include <utility.h>
+#include <memory.h>
+#include <hal/hal.h>
 
 const char logo[] = 
 "\
@@ -33,10 +37,26 @@ const char logo[] =
              \\$$   \\$$  \\$$$$$$      \\$     \\$$$$$$ \\$$   \\$$\n\n\
 ";
 
+extern uint8_t __text_start;
+extern uint8_t __end;
+
+extern uint8_t __bss_start;
+extern uint8_t __bss_end;
 
 void __attribute__((cdecl)) start(Boot_info* info)
 {
+    // calculate the kernel size and memset the bss section
+    uint32_t kernel_size = ((uint32_t)(&__end) - 0xc0000000 + 0x100000) - 0x100000;
+    memset(&__bss_start, 0, (&__bss_end) - (&__bss_start));
+
     log_info("kernel", "the Kernel is running");
-    printf("hello world !");
+
+    log_info("kernel", "kernel start 0x%x, kernel end 0x%x", &__text_start, &__end);
+    log_info("kernel", "kernel size %d Kb", roundUp_div(kernel_size, 1024));
+
+    puts(logo);
+
+    HAL_initialize(info);
+
     for(;;);
 }

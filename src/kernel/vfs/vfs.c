@@ -20,6 +20,10 @@
 #include <drivers/e9_port.h>
 #include <drivers/vga_text.h>
 
+//============================================================================
+//    INTERFACE FUNCTIONS
+//============================================================================
+
 size_t VFS_write(fd_t fd, const void *buffer, size_t size)
 {
 	switch (fd)

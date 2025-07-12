@@ -30,4 +30,8 @@ typedef int fd_t;   // file descriptor
 #define VFS_FD_STDERR   -2
 #define VFS_FD_DEBUG    -3
 
+//============================================================================
+//    INTERFACE FUNCTION PROTOTYPES
+//============================================================================
+
 size_t VFS_write(fd_t fd, const void *buffer, size_t size);

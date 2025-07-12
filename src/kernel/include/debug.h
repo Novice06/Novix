@@ -1,5 +1,9 @@
 #include <stdio.h>
 
+//============================================================================
+//    INTERFACE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
+//============================================================================
+
 #define MIN_LOG_LEVEL LVL_DEBUG
 
 typedef enum {
@@ -9,6 +13,10 @@ typedef enum {
     LVL_ERROR = 3,
     LVL_CRITICAL = 4
 } DebugLevel;
+
+//============================================================================
+//    INTERFACE FUNCTION PROTOTYPES
+//============================================================================
 
 void logf(const char* module, DebugLevel level, const char* fmt, ...);
 #define log_debug(module, ...) logf(module, LVL_DEBUG, __VA_ARGS__)

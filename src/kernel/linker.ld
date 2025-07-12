@@ -16,6 +16,9 @@ SECTIONS
     .data               : AT(ADDR(.data) - diff)    { __data_start = .;       *(.data)    }
     .rodata             : AT(ADDR(.rodata) - diff)  { __rodata_start = .;     *(.rodata)  }
     .bss                : AT(ADDR(.bss) - diff)     { __bss_start = .;        *(.bss)     }
+
+    __bss_end = .;
+
     .stack              : AT(ADDR(.stack) - diff)   { __stack_start = .;      *(.stack)   }
     
     __end = .;

@@ -102,6 +102,25 @@ static void scrollUp()
 //    INTERFACE FUNCTIONS
 //============================================================================
 
+/** clr:
+* clear the screen with the defaut color and update the cursor
+*/
+void VGA_clr()
+{
+    line = 0;
+    column = 0;
+    currentColor = defaultColor;
+
+    for(uint16_t y = 0; y < HEIGHT; y++){
+        for(uint16_t x = 0; x < WIDTH; x++){
+            vga[y * WIDTH + x] = ' ' | defaultColor;
+        }
+    }
+
+    updateCursor();
+}
+
+
 /** VGA_putc:
 * print a charater to the screen
 * @param c the character

@@ -34,6 +34,15 @@ const char g_HexChars[] = "0123456789abcdef";
 //    INTERFACE FUNCTIONS
 //============================================================================
 
+/*
+ * Redirected through VFS to emulate libc-like output behavior
+ *
+ * All output operations in this file are routed through the VFS layer.
+ * The goal is to centralize all I/O access and make stdio functions
+ * behave as closely as possible to standard C library equivalents.
+ */
+
+
 void fputc(char c, fd_t file)
 {
     VFS_write(file, &c, sizeof(c));
@@ -47,6 +56,12 @@ void fputs(const char* str, fd_t file)
         str++;
     }
 }
+
+/*
+ * Minimal printf implementation for embedded and kernel-level systems.
+ * This version avoids heavy dependencies and supports only a subset
+ * of format specifiers (e.g., %s, %d, %x, %c).
+ */
 
 #define PRINTF_STATE_NORMAL         0
 #define PRINTF_STATE_LENGTH         1
