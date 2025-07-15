@@ -17,18 +17,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <hal/hal.h>
-#include <hal/gdt.h>
-#include <hal/idt.h>
-#include <hal/isr.h>
+#pragma once
+#include <stdint.h>
 
 //============================================================================
-//    INTERFACE FUNCTIONS
+//    INTERFACE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
 //============================================================================
 
-void HAL_initialize(Boot_info* info)
-{
-    GDT_initilize();
-    IDT_initilize();
-    ISR_initialze();
-}
+typedef enum{
+    IDT_ATTRIBUTE_TASK_GATE             = 0x05,
+    IDT_ATTRIBUTE_16BIT_INTERRUPT_GATE  = 0X06,
+    IDT_ATTRIBUTE_16BIT_TRAP_GATE       = 0X07,
+    IDT_ATTRIBUTE_32BIT_INTERRUPT_GATE  = 0X0E,
+    IDT_ATTRIBUTE_32BIT_TRAP_GATE       = 0X0F,
+
+    IDT_ATTRIBUTE_DPL_RING0             = 0X00,
+    IDT_ATTRIBUTE_DPL_RING1             = 0X20,
+    IDT_ATTRIBUTE_DPL_RING2             = 0X40,
+    IDT_ATTRIBUTE_DPL_RING3             = 0X60,
+
+    IDT_ATTRIBUTE_PRESENT_BIT           = 0X80,
+}IDT_ATTRIBUTE_BYTE;
+
+//============================================================================
+//    INTERFACE FUNCTION PROTOTYPES
+//============================================================================
+
+void IDT_initilize();
+void IDT_setGate(int interrupt, void* offset, uint8_t attribute);

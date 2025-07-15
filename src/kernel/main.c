@@ -58,5 +58,7 @@ void __attribute__((cdecl)) start(Boot_info* info)
 
     HAL_initialize(info);
 
+    int i = 1/0;
+
     for(;;);
 }

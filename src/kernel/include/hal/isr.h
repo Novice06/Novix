@@ -17,18 +17,27 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <hal/hal.h>
-#include <hal/gdt.h>
-#include <hal/idt.h>
-#include <hal/isr.h>
+#pragma once
+#include <stdint.h>
 
 //============================================================================
-//    INTERFACE FUNCTIONS
+//    INTERFACE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
 //============================================================================
 
-void HAL_initialize(Boot_info* info)
+typedef struct 
 {
-    GDT_initilize();
-    IDT_initilize();
-    ISR_initialze();
-}
+    // in the reverse order they are pushed:
+    uint32_t ds;                                            // data segment pushed by us
+    uint32_t edi, esi, ebp, useless, ebx, edx, ecx, eax;    // pusha
+    uint32_t interrupt, error;                              // we push interrupt, error is pushed automatically (or our dummy)
+    uint32_t eip, cs, eflags, esp, ss;                      // pushed automatically by CPU
+} __attribute__((packed)) Registers;
+
+typedef void (*ISRHandler) (Registers* regs);
+
+//============================================================================
+//    INTERFACE FUNCTION PROTOTYPES
+//============================================================================
+
+void ISR_initialze();
+void ISR_registerNewHandler(int interrupt, ISRHandler handler);
