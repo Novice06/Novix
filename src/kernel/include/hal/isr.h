@@ -39,5 +39,5 @@ typedef void (*ISRHandler) (Registers* regs);
 //    INTERFACE FUNCTION PROTOTYPES
 //============================================================================
 
-void ISR_initialze();
+void ISR_initialize();
 void ISR_registerNewHandler(int interrupt, ISRHandler handler);

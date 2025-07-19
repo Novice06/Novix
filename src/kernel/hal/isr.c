@@ -102,7 +102,7 @@ void ISR_handler(Registers* regs)
 //    INTERFACE FUNCTIONS
 //============================================================================
 
-void ISR_initialze()
+void ISR_initialize()
 {
     ISR_initializeGates();
 }

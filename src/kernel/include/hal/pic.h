@@ -17,20 +17,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <hal/hal.h>
-#include <hal/gdt.h>
-#include <hal/idt.h>
-#include <hal/isr.h>
-#include <hal/irq.h>
+#pragma once
+#include <stdint.h>
 
 //============================================================================
-//    INTERFACE FUNCTIONS
+//    INTERFACE FUNCTION PROTOTYPES
 //============================================================================
 
-void HAL_initialize(Boot_info* info)
-{
-    GDT_initialize();
-    IDT_initialize();
-    ISR_initialize();
-    IRQ_initialize();
-}
+void PIC_configure(uint8_t offsetPic1, uint8_t offsetPic2);
+void PIC_sendEndOfInterrupt(int irq);
+void PIC_disable();
+void PIC_mask(int irq);
+void PIC_unMask(int irq);
+uint16_t PIC_readIrqRequestRegister();
+uint16_t PIC_readInServiceRegister();

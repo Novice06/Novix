@@ -24,5 +24,5 @@
 //    INTERFACE FUNCTION PROTOTYPES
 //============================================================================
 
-void GDT_initilize();
+void GDT_initialize();
 void TSS_setKernelStack(uint32_t esp0);

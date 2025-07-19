@@ -17,20 +17,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <hal/hal.h>
-#include <hal/gdt.h>
-#include <hal/idt.h>
+#pragma once
 #include <hal/isr.h>
-#include <hal/irq.h>
 
 //============================================================================
-//    INTERFACE FUNCTIONS
+//    INTERFACE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
 //============================================================================
 
-void HAL_initialize(Boot_info* info)
-{
-    GDT_initialize();
-    IDT_initialize();
-    ISR_initialize();
-    IRQ_initialize();
-}
+typedef void (*IRQHandler) (Registers* regs);
+
+//============================================================================
+//    INTERFACE FUNCTION PROTOTYPES
+//============================================================================
+
+void IRQ_initialize();
+void IRQ_registerNewHandler(int irq, IRQHandler handler);

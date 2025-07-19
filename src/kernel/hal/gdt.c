@@ -200,7 +200,7 @@ void TSS_setKernelStack(uint32_t esp0)
     g_TSS.esp0 = esp0;
 }
 
-void GDT_initilize()
+void GDT_initialize()
 {
     /*
     * Current GDT setup creates a simple table with 6 entries:

@@ -43,5 +43,5 @@ typedef enum{
 //    INTERFACE FUNCTION PROTOTYPES
 //============================================================================
 
-void IDT_initilize();
+void IDT_initialize();
 void IDT_setGate(int interrupt, void* offset, uint8_t attribute);
