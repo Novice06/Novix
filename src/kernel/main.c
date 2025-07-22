@@ -23,6 +23,7 @@
 #include <utility.h>
 #include <memory.h>
 #include <hal/hal.h>
+#include <mem_manager/physmem_manager.h>
 
 const char logo[] = 
 "\
@@ -56,7 +57,9 @@ void __attribute__((cdecl)) start(Boot_info* info)
 
     puts(logo);
 
-    HAL_initialize(info);
+    HAL_initialize();
+    
+    PHYSMEM_initialize(info, kernel_size);
 
     for(;;);
 }

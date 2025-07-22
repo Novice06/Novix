@@ -27,7 +27,7 @@
 //    INTERFACE FUNCTIONS
 //============================================================================
 
-void HAL_initialize(Boot_info* info)
+void HAL_initialize()
 {
     GDT_initialize();
     IDT_initialize();

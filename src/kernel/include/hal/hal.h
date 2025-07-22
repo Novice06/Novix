@@ -19,10 +19,9 @@
 
 
 #pragma once
-#include <boot_info.h>
 
 //============================================================================
 //    INTERFACE FUNCTION PROTOTYPES
 //============================================================================
 
-void HAL_initialize(Boot_info* info);
+void HAL_initialize();
