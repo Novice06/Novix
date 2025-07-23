@@ -123,11 +123,10 @@ void PHYSMEM_memoryMapToBlock(uint32_t memoryBlockCount)
 {
     /* 
      * the way we proceed here is for all available blocks we divide the bases
-     * to get 4kb align address but we need to round up the division
+     * and round up the division in order to get a 4kb align address
      * but for any other types of block it's their length that need to be rounded up
      * this is necessary since we want reserved blocks not  to be shrunk and
      * occupy as much space as possible within their actually reserved area
-     * unlike available region those must be shrunk
     */
 	for(int i = 0; i < memoryBlockCount; i++)
 	{

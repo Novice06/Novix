@@ -24,6 +24,9 @@
 #include <memory.h>
 #include <hal/hal.h>
 #include <mem_manager/physmem_manager.h>
+#include <mem_manager/virtmem_manager.h>
+#include <mem_manager/heap.h>
+#include <mem_manager/vmalloc.h>
 
 const char logo[] = 
 "\
@@ -55,11 +58,13 @@ void __attribute__((cdecl)) start(Boot_info* info)
     log_info("kernel", "kernel start 0x%x, kernel end 0x%x", &__text_start, &__end);
     log_info("kernel", "kernel size %d Kb", roundUp_div(kernel_size, 1024));
 
-    puts(logo);
-
     HAL_initialize();
     
     PHYSMEM_initialize(info, kernel_size);
+    VIRTMEM_initialize();
+    HEAP_initialize();
+    VMALLOC_initialize();
 
+    puts(logo);
     for(;;);
 }
