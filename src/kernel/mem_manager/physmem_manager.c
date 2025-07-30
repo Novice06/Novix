@@ -122,12 +122,17 @@ Found:
 void PHYSMEM_memoryMapToBlock(uint32_t memoryBlockCount)
 {
     /* 
-     * the way we proceed here is for all available blocks we divide the bases
-     * and round up the division in order to get a 4kb align address
-     * but for any other types of block it's their length that need to be rounded up
-     * this is necessary since we want reserved blocks not  to be shrunk and
-     * occupy as much space as possible within their actually reserved area
+    * the way we proceed here is:
+    * - For all AVAILABLE blocks, we divide the base and length into 4KB chunks,
+    *   and we round UP the base address to ensure 4KB alignment.
+    *
+    * - For any other block types (e.g., reserved), we round UP the **length** only,
+    *   keeping the base untouched.
+    *
+    * This is necessary because we want reserved blocks to preserve their entire range,
+    * while free blocks should be usable starting from a clean 4KB-aligned base.
     */
+
 	for(int i = 0; i < memoryBlockCount; i++)
 	{
 		if(g_memory4KbEntries[i].type == AVAILABLE)

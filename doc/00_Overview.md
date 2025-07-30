@@ -6,7 +6,6 @@ Novix aims to be:
 - An educational project for understanding kernel development.
 - A modular and maintainable base for future extensions.
 - Clean code organization
-- Shared utilities to avoid duplication
 - Proper documentation for easier improvement and debugging
 
 ## Source Tree Overview
@@ -116,3 +115,14 @@ Once paging is enabled and control is transferred to the higher-half, execution 
 At this stage, the kernel begins its initialization phase by calling the function `HAL_initialize()`. This function sets up key low-level components such as the Global Descriptor Table (GDT), the Interrupt Descriptor Table (IDT), and other hardware abstraction routines required for the kernel to run safely.
 
 More details about what happens inside `HAL_initialize()` can be found in the dedicated document: 📄 [01_HAL_initialize.md](01_HAL_initialize.md)
+
+### Memory Management Initialization
+
+After setting up the HAL and enabling interrupts, the kernel begins initializing **all memory management components** in a specific order. This ensures a clean, modular setup of memory subsystems.
+
+The initialization steps are as follows:
+
+1. **Physical Memory Manager** Handles the allocation of physical frames and memory regions. See 📄 [02_PHYSMEM_initialize.md](02_PHYSMEM_initialize.md)
+2. **Virtual Memory Manager** Responsible for creating and managing paging structures, address spaces, and mapping. See 📄 [03_VIRTMEM_initialize.md](03_VIRTMEM_initialize.md)
+3. **Kernel Heap Manager** Provides dynamic memory allocation (`kmalloc`, etc.) inside the kernel space. See 📄 [04_HEAP_initialize.md](04_HEAP_initialize.md)
+4. **Page-Aligned Allocator (4KB)** A specialized allocator that ensures 4KB alignment for page-level memory usage. See 📄 [05_VMALLOC_initialize.md](05_VMALLOC_initialize.md)
