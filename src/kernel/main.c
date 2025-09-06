@@ -23,10 +23,14 @@
 #include <utility.h>
 #include <memory.h>
 #include <hal/hal.h>
+#include <hal/io.h>
 #include <mem_manager/physmem_manager.h>
 #include <mem_manager/virtmem_manager.h>
 #include <mem_manager/heap.h>
 #include <mem_manager/vmalloc.h>
+#include <proc/process.h>
+#include <proc/time.h>
+#include <proc/lock.h>
 
 const char logo[] = 
 "\
@@ -47,6 +51,64 @@ extern uint8_t __end;
 extern uint8_t __bss_start;
 extern uint8_t __bss_end;
 
+mutex_t test;
+
+void taskC();
+void taskA()
+{
+    for(;;)//int i = 0; i < 5; i++
+    {
+        //sleep(600);
+        acquire_mutex(&test);
+        log_info("taskA", "A is running !");
+        release_mutex(&test);
+    }
+
+    PROCESS_createKernelProcess(taskC);
+    PROCESS_terminate();
+}
+
+void taskD();
+void taskB()
+{
+    for(;;)//int i = 0; i < 10; i++
+    {
+        //sleep(400);
+        acquire_mutex(&test);
+        log_info("taskB", "B is running !");
+        release_mutex(&test);
+    }
+
+    PROCESS_createKernelProcess(taskD);
+    PROCESS_terminate();
+}
+
+void taskC()
+{
+    for(;;)//int i = 0; i < 8; i++
+    {
+        //sleep(400);
+        acquire_mutex(&test);
+        log_info("taskC", "C is running !");
+        release_mutex(&test);
+    }
+    PROCESS_createKernelProcess(taskA);
+    PROCESS_terminate();
+}
+
+void taskD()
+{
+    for(;;)//int i = 0; i < 13; i++
+    {
+        //sleep(200);
+        acquire_mutex(&test);
+        log_info("taskD", "D is running !");
+        release_mutex(&test);
+    }
+    PROCESS_createKernelProcess(taskB);
+    PROCESS_terminate();
+}
+
 void __attribute__((cdecl)) start(Boot_info* info)
 {
     // calculate the kernel size and memset the bss section
@@ -66,5 +128,17 @@ void __attribute__((cdecl)) start(Boot_info* info)
     VMALLOC_initialize();
 
     puts(logo);
-    for(;;);
+
+    PROCESS_initializeMultiTasking();
+    PROCESS_createKernelProcess(taskA);
+    PROCESS_createKernelProcess(taskB);
+    PROCESS_createKernelProcess(taskC);
+    PROCESS_createKernelProcess(taskD);
+
+    for(;;)
+    {
+        //yield();
+        HLT();
+    }
+       
 }

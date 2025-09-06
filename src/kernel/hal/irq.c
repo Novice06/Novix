@@ -64,7 +64,7 @@ void IRQ_handler(Registers* regs)
 //    INTERFACE FUNCTIONS
 //============================================================================
 
-void timer()
+void mask_pitInterupt()
 {
     PIC_sendEndOfInterrupt(0);
 }
@@ -78,7 +78,7 @@ void IRQ_initialize()
         ISR_registerNewHandler(PIC_REMAP_OFFSET + i, IRQ_handler);
 
     // pit
-    IRQ_registerNewHandler(0, timer);
+    IRQ_registerNewHandler(0, mask_pitInterupt);
 
     // enable interrupts
     enableInterrupts();
