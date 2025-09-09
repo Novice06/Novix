@@ -228,8 +228,7 @@ void PROCESS_initializeMultiTasking()
     PROCESS_cleaner->state = BLOCKED;
 
     PROCESS_cleaner->next = NULL;
-
-    IRQ_registerNewHandler(0, timer);
+    IRQ_registerNewHandler(0, timer); // preemptive multi tasking
 }
 
 void PROCESS_createKernelProcess(void* task)

@@ -66,8 +66,8 @@ void acquire_mutex(mutex_t* mut)
             mut->last_waiting_list = current_process;
         }
 
-        block_task();
         unlock_scheduler();
+        block_task();
         yield();
     }
     else
