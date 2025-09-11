@@ -67,7 +67,7 @@ void acquire_mutex(mutex_t* mut)
         }
 
         unlock_scheduler();
-        block_task();
+        block_task(WAITING);
         yield();
     }
     else
@@ -83,7 +83,7 @@ void release_mutex(mutex_t* mut)
 
     if(mut->owner != current_process)
     {
-        log_err("mutex", "Process %d tried to release mutex it doesn't own!", current_process->id);
+        log_err("mutex", "Process %lld tried to release mutex it doesn't own!", current_process->id);
 
         return;
     }

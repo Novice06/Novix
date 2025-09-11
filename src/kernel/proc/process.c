@@ -89,10 +89,10 @@ void add_READY_process(process_t* proc, bool high_priority)
     unlock_scheduler();
 }
 
-void block_task()
+void block_task(status_t reason)
 {
     lock_scheduler();
-    PROCESS_current->state = BLOCKED;
+    PROCESS_current->state = reason;
     unlock_scheduler();
     
     yield();
@@ -159,6 +159,8 @@ void spawnProcess()
 
     entryPoint = PROCESS_current->entryPoint;
 
+    log_debug("spawnProcess", "process id: %lld, process virtual pdbr 0x%x", PROCESS_current->id, getPDBR());
+
     unlock_scheduler(); // unlocks beacause a task switch locks the scheduler
     entryPoint();
 }
@@ -183,15 +185,15 @@ void cleaner_task()
 
             log_debug("cleaner", "cleaning 0x%x, id: %d", trash, trash->id);
 
-            // TODO: add support to clean usermode process
+            vfree(trash->esp0); // deallocate the kernel stack for the process
+            VIRTMEM_destroyAddressSpace(trash->virt_cr3);
 
-            vfree(trash->esp0);
             kfree(trash);
 
             continue;
         }
 
-        block_task();
+        block_task(BLOCKED);
         yield();
     }
     
@@ -206,6 +208,7 @@ void PROCESS_initializeMultiTasking()
     PROCESS_idle->esp = NULL;   // this will be filled automatically when a context switch occurs
 
     PROCESS_idle->cr3 = getPDBR();
+    PROCESS_idle->virt_cr3 = NULL;  // the page directory has not been dynamically allocated...
     PROCESS_idle->usermode = false;
     PROCESS_idle->entryPoint = NULL;
     PROCESS_idle->id = __id_dispatcher++;
@@ -226,6 +229,7 @@ void PROCESS_initializeMultiTasking()
     *(uint32_t*)PROCESS_cleaner->esp = 0x202;       // default eflags for the new process
 
     PROCESS_cleaner->cr3 = getPDBR();
+    PROCESS_cleaner->virt_cr3 = NULL; // the cleaner task share the same virtual space with the idle process...
     PROCESS_cleaner->usermode = false;
     PROCESS_cleaner->entryPoint = cleaner_task;
     PROCESS_cleaner->id = __id_dispatcher++;
@@ -251,7 +255,9 @@ void PROCESS_createKernelProcess(void* task)
     proc->esp -= (4 * 5);   // pushed register
     *(uint32_t*)proc->esp = 0x202;       // default eflags for the new process
 
-    proc->cr3 = getPDBR();
+    proc->virt_cr3 = (void*)VIRTMEM_createAddressSpace();    // allocate 4kb and create the new pdbr
+    proc->cr3 = (void*)VIRTMEM_getPhysAddr(proc->virt_cr3);    // store the physical address of the new pdbr
+
     proc->usermode = false;
     proc->entryPoint = task;
     proc->id = __id_dispatcher++;

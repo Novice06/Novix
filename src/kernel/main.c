@@ -58,7 +58,7 @@ void taskA()
 {
     for(int i = 0; i < 100; i++)
     {
-        sleep(600);
+        //sleep(600);
         printf("I'm task A\n");
     }
 
@@ -71,7 +71,7 @@ void taskB()
 {
     for(int i = 0; i < 100; i++)
     {
-        sleep(400);
+        //sleep(400);
         printf("I'm task B\n");
     }
 
@@ -83,7 +83,7 @@ void taskC()
 {
     for(int i = 0; i < 100; i++)
     {
-        sleep(400);
+        //sleep(400);
         printf("I'm task C\n");
     }
     //PROCESS_createKernelProcess(taskA);
@@ -94,7 +94,7 @@ void taskD()
 {
     for(int i = 0; i < 100; i++)
     {
-        sleep(200);
+        //sleep(200);
         printf("I'm task D\n");
     }
     //PROCESS_createKernelProcess(taskB);

@@ -22,24 +22,25 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum{DEAD, RUNNING, READY, BLOCKED}status_t;
+typedef enum{DEAD, RUNNING, READY, BLOCKED, WAITING}status_t;
 
 typedef struct process
 {
     void* cr3;
     void* esp;
     void* esp0;
+    void* virt_cr3;
     bool usermode;
     void* entryPoint;
     uint64_t id;
     status_t state;
     struct process *next;
-}process_t;
+} __attribute__((packed)) process_t;
 
 void lock_scheduler();
 void unlock_scheduler();
 
-void block_task();
+void block_task(status_t reason);
 void unblock_task(process_t* proc);
 
 void yield();

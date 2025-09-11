@@ -97,7 +97,7 @@ void sleep(uint64_t ms)
 
     add_SLEEP_process(new);
 
-    block_task();
+    block_task(WAITING);
 }
 
 void wakeUp_proc()

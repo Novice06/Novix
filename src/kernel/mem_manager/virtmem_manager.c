@@ -18,9 +18,11 @@
 */
 
 #include <stdint.h>
+#include <debug.h>
 #include <stddef.h>
 #include <mem_manager/physmem_manager.h>
 #include <mem_manager/virtmem_manager.h>
+#include <mem_manager/vmalloc.h>
 #include <memory.h>
 
 //============================================================================
@@ -220,4 +222,46 @@ bool VIRTMEM_initialize()
     enablePaging();    // just in case ...
 
     return true;
+}
+
+uint32_t* VIRTMEM_createAddressSpace()
+{
+    PDE* page_directory = (PDE*)0xFFFFF000; // virtual addresse of the current page directory
+    PDE* new_pagedirectory = vmalloc(1);    // allocate 4kb
+
+    memcpy(new_pagedirectory, page_directory, 0x1000);  // copy the page directory
+
+    for(int i = 1; i < 768; i++)
+        new_pagedirectory[i] = 0;   // unmap all the page from 4mb to 3gb
+
+    // recurcive mapping here
+    new_pagedirectory[1023] = PAGE_ADD_ATTRIBUTE((uint32_t)VIRTMEM_getPhysAddr(new_pagedirectory), PDE_PRESENT | PDE_WRITE | PDE_KERNEL_MODE);
+
+    return new_pagedirectory;
+}
+
+// this function suppose that you provide a virtual address of the page directory
+void VIRTMEM_destroyAddressSpace(PDE* page_directory)
+{
+    /*
+        IMPORTANT: this functions is meant to be called inside a cleaner process because it's overwrite
+        the pages between 4mb and 3gb for deallocation purpose
+    */
+
+    PDE* current_page_directory = (PDE*)0xFFFFF000; // virtual addresse of the current page directory
+
+    // we need to deallocate all allocated page between 4mb and 3gb
+    // so we need to first get access of those pages
+    for(int i = 1; i < 768; i++)
+        current_page_directory[i] = page_directory[i];   // map all the page from 4mb to 3gb
+
+    // unmap pages from 4mb to 3gb
+    for(int i = 0x400000; i < 0xc0000000; i += 0x1000)
+        VIRTMEM_unMapPage((void*)i);
+
+    // unmap page tables from 4mb to 3gb
+    for(int i = 0x400000; i < 0xc0000000; i += 0x400000)
+        VIRTMEM_unMapTable((void*)i);
+
+    vfree(page_directory);
 }
