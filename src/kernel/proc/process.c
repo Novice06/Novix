@@ -41,6 +41,8 @@ process_t* last_ready;
 process_t* terminated_tasks;
 
 int IRQ_disable_counter = 0;
+bool __isMultitaskingEnable = false;
+uint64_t __id_dispatcher;
 
 void lock_scheduler()
 {
@@ -177,9 +179,9 @@ void cleaner_task()
             process_t* trash = terminated_tasks;
             terminated_tasks = terminated_tasks->next;
 
-            log_debug("cleaner", "cleaning 0x%x", trash);
-
             unlock_scheduler();
+
+            log_debug("cleaner", "cleaning 0x%x, id: %d", trash, trash->id);
 
             // TODO: add support to clean usermode process
 
@@ -206,6 +208,7 @@ void PROCESS_initializeMultiTasking()
     PROCESS_idle->cr3 = getPDBR();
     PROCESS_idle->usermode = false;
     PROCESS_idle->entryPoint = NULL;
+    PROCESS_idle->id = __id_dispatcher++;
 
     PROCESS_idle->next = NULL;
 
@@ -225,10 +228,12 @@ void PROCESS_initializeMultiTasking()
     PROCESS_cleaner->cr3 = getPDBR();
     PROCESS_cleaner->usermode = false;
     PROCESS_cleaner->entryPoint = cleaner_task;
+    PROCESS_cleaner->id = __id_dispatcher++;
     PROCESS_cleaner->state = BLOCKED;
 
     PROCESS_cleaner->next = NULL;
     IRQ_registerNewHandler(0, timer); // preemptive multi tasking
+    __isMultitaskingEnable = true;
 }
 
 void PROCESS_createKernelProcess(void* task)
@@ -249,6 +254,7 @@ void PROCESS_createKernelProcess(void* task)
     proc->cr3 = getPDBR();
     proc->usermode = false;
     proc->entryPoint = task;
+    proc->id = __id_dispatcher++;
 
     proc->next = NULL;
 
@@ -269,4 +275,9 @@ void PROCESS_terminate()
 
     unlock_scheduler();
     yield();
+}
+
+bool PROCESS_isMultitaskingEnabled()
+{
+    return __isMultitaskingEnable;
 }

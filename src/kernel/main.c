@@ -56,56 +56,48 @@ mutex_t test;
 void taskC();
 void taskA()
 {
-    for(;;)//int i = 0; i < 5; i++
+    for(int i = 0; i < 100; i++)
     {
-        //sleep(600);
-        acquire_mutex(&test);
-        log_info("taskA", "A is running !");
-        release_mutex(&test);
+        sleep(600);
+        printf("I'm task A\n");
     }
 
-    PROCESS_createKernelProcess(taskC);
+    //PROCESS_createKernelProcess(taskC);
     PROCESS_terminate();
 }
 
 void taskD();
 void taskB()
 {
-    for(;;)//int i = 0; i < 10; i++
+    for(int i = 0; i < 100; i++)
     {
-        //sleep(400);
-        acquire_mutex(&test);
-        log_info("taskB", "B is running !");
-        release_mutex(&test);
+        sleep(400);
+        printf("I'm task B\n");
     }
 
-    PROCESS_createKernelProcess(taskD);
+    //PROCESS_createKernelProcess(taskD);
     PROCESS_terminate();
 }
 
 void taskC()
 {
-    for(;;)//int i = 0; i < 8; i++
+    for(int i = 0; i < 100; i++)
     {
-        //sleep(400);
-        acquire_mutex(&test);
-        log_info("taskC", "C is running !");
-        release_mutex(&test);
+        sleep(400);
+        printf("I'm task C\n");
     }
-    PROCESS_createKernelProcess(taskA);
+    //PROCESS_createKernelProcess(taskA);
     PROCESS_terminate();
 }
 
 void taskD()
 {
-    for(;;)//int i = 0; i < 13; i++
+    for(int i = 0; i < 100; i++)
     {
-        //sleep(200);
-        acquire_mutex(&test);
-        log_info("taskD", "D is running !");
-        release_mutex(&test);
+        sleep(200);
+        printf("I'm task D\n");
     }
-    PROCESS_createKernelProcess(taskB);
+    //PROCESS_createKernelProcess(taskB);
     PROCESS_terminate();
 }
 

@@ -31,6 +31,7 @@ typedef struct process
     void* esp0;
     bool usermode;
     void* entryPoint;
+    uint64_t id;
     status_t state;
     struct process *next;
 }process_t;
@@ -46,3 +47,5 @@ process_t* PROCESS_getCurrent();
 void PROCESS_initializeMultiTasking();
 void PROCESS_createKernelProcess(void* task);
 void PROCESS_terminate();
+
+bool PROCESS_isMultitaskingEnabled();

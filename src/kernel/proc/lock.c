@@ -83,7 +83,8 @@ void release_mutex(mutex_t* mut)
 
     if(mut->owner != current_process)
     {
-        log_err("mutex", "Process 0x%x tried to release mutex it doesn't own!", current_process->entryPoint);
+        log_err("mutex", "Process %d tried to release mutex it doesn't own!", current_process->id);
+
         return;
     }
 

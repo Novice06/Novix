@@ -23,6 +23,8 @@
 #include <memory.h>
 #include <utility.h>
 #include <mem_manager/vmalloc.h>
+#include <proc/process.h>
+#include <proc/lock.h>
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
@@ -59,6 +61,8 @@ uint32_t VMALLOC_totalUsedBlock     = 0;
 uint32_t VMALLOC_bitmapSize;
 
 tracking_list_t* tracking_head = NULL;
+
+mutex_t VMALLOC_mutex;
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE FUNCTIONS
@@ -198,6 +202,9 @@ void* vmalloc(size_t size)
     if(size <= 0)
         return NULL;
 
+    if(PROCESS_isMultitaskingEnabled())
+        acquire_mutex(&VMALLOC_mutex);
+
     uint32_t block_size = roundUp_div(size, BLOCK_SIZE);
 
     void* block_addr = VMALLOC_findFreeRange(block_size);
@@ -219,6 +226,9 @@ void* vmalloc(size_t size)
         tracking_head->next = new;
     }
 
+    if(PROCESS_isMultitaskingEnabled())
+        release_mutex(&VMALLOC_mutex);
+
     return block_addr;
 }
 
@@ -226,6 +236,9 @@ void vfree(void* ptr)
 {
     if(ptr == NULL || tracking_head == NULL)
         return;
+
+    if(PROCESS_isMultitaskingEnabled())
+        acquire_mutex(&VMALLOC_mutex);
 
     tracking_list_t *this = tracking_head;
     tracking_list_t *before_this = NULL;
@@ -248,6 +261,9 @@ void vfree(void* ptr)
                 tracking_head = this->next;
                 kfree(this);
             }
+
+            if(PROCESS_isMultitaskingEnabled())
+                release_mutex(&VMALLOC_mutex);
             
             return;
         }
@@ -255,6 +271,9 @@ void vfree(void* ptr)
         before_this = this;
         this = this->next;
     }
+
+    if(PROCESS_isMultitaskingEnabled())
+        release_mutex(&VMALLOC_mutex);
 
     // if it reaches here that's means we never allocated this pointer before !
 }

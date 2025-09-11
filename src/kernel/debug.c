@@ -1,5 +1,7 @@
 #include <debug.h>
 #include <stdio.h>
+#include <proc/process.h>
+#include <proc/lock.h>
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE DATA
@@ -16,6 +18,8 @@ static const char* const g_LogSeverityColors[] =
 
 static const char* const g_ColorReset = "\033[0m";
 
+mutex_t DEBUG_mutex;
+
 //============================================================================
 //    INTERFACE FUNCTIONS
 //============================================================================
@@ -28,11 +32,17 @@ void logf(const char* module, DebugLevel level, const char* fmt, ...)
     if (level < MIN_LOG_LEVEL)
         return;
 
+    if(PROCESS_isMultitaskingEnabled())
+        acquire_mutex(&DEBUG_mutex);
+
     fputs(g_LogSeverityColors[level], VFS_FD_DEBUG);    // set color depending on level
     fprintf(VFS_FD_DEBUG, "[%s] ", module);             // write module
     vfprintf(VFS_FD_DEBUG, fmt, args);                  // write text
     fputs(g_ColorReset, VFS_FD_DEBUG);                  // reset format
     fputc('\n', VFS_FD_DEBUG);                          // newline
+
+    if(PROCESS_isMultitaskingEnabled())
+        release_mutex(&DEBUG_mutex);
 
     va_end(args);  
 }

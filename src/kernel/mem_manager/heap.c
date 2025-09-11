@@ -21,6 +21,8 @@
 #include <mem_manager/virtmem_manager.h>
 #include <mem_manager/heap.h>
 #include <ordered_array.h>
+#include <proc/process.h>
+#include <proc/lock.h>
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
@@ -51,6 +53,8 @@ uint32_t lastHeapAllocatedPage;
 
 header_t *head = NULL, *tail = NULL;
 ordered_array freeBlockArray;
+
+mutex_t HEAP_mutex;
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE FUNCTIONS
@@ -154,6 +158,9 @@ void* kmalloc(size_t size)
     if(!size)
         return NULL;
 
+    if(PROCESS_isMultitaskingEnabled())
+        acquire_mutex(&HEAP_mutex);
+
     header = search_freeBlock(size);
     if(header)
     {
@@ -182,12 +189,20 @@ void* kmalloc(size_t size)
                 tail = newHeader;
         }
 
+        if(PROCESS_isMultitaskingEnabled())
+            release_mutex(&HEAP_mutex);
+
         return ((void*)header + sizeof(header_t));
     }
 
     block = sbrk(totalSize);    // requesting memory from the heap
     if(block == (void*) -1)
+    {
+        if(PROCESS_isMultitaskingEnabled())
+            release_mutex(&HEAP_mutex);
+
         return NULL;
+    }
 
     //filling header information
     header = (header_t*)block;
@@ -209,6 +224,9 @@ void* kmalloc(size_t size)
     tail = header;
 
     block += sizeof(header_t);
+
+    if(PROCESS_isMultitaskingEnabled())
+        release_mutex(&HEAP_mutex);
 
     return block;
 }
@@ -264,6 +282,9 @@ void kfree(void* block)
 
     if(header->isFree)
         return; // nothing to do
+
+    if(PROCESS_isMultitaskingEnabled())
+        acquire_mutex(&HEAP_mutex);
 
     // merging left block if it's free
     left_block = header->back;
@@ -323,4 +344,7 @@ void kfree(void* block)
 
         remove_ordered_array(getIndex_ordered_array(header, &freeBlockArray), &freeBlockArray); // in all case we need to remove it from the free list array
     }
+
+    if(PROCESS_isMultitaskingEnabled())
+        release_mutex(&HEAP_mutex);
 }
