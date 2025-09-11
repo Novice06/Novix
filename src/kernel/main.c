@@ -30,7 +30,7 @@
 #include <mem_manager/vmalloc.h>
 #include <proc/process.h>
 #include <proc/time.h>
-#include <proc/lock.h>
+#include <syscall/syscall.h>
 
 const char logo[] = 
 "\
@@ -50,8 +50,6 @@ extern uint8_t __end;
 
 extern uint8_t __bss_start;
 extern uint8_t __bss_end;
-
-mutex_t test;
 
 void taskC();
 void taskA()
@@ -118,6 +116,8 @@ void __attribute__((cdecl)) start(Boot_info* info)
     VIRTMEM_initialize();
     HEAP_initialize();
     VMALLOC_initialize();
+
+    SYSCALL_initialize();
 
     puts(logo);
 

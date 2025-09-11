@@ -32,7 +32,11 @@ echo "void ISR_initializeGates()" >> $ISRS_GEN_C
 echo "{" >> $ISRS_GEN_C
 
 for i in $(seq 0 255); do
-    echo "    IDT_setGate(${i}, ISR${i}, IDT_ATTRIBUTE_32BIT_INTERRUPT_GATE | IDT_ATTRIBUTE_DPL_RING0 | IDT_ATTRIBUTE_PRESENT_BIT);" >> $ISRS_GEN_C
+    if [ "$i" -eq 128 ]; then
+        echo "    IDT_setGate(${i}, ISR${i}, IDT_ATTRIBUTE_32BIT_TRAP_GATE | IDT_ATTRIBUTE_DPL_RING3 | IDT_ATTRIBUTE_PRESENT_BIT);" >> $ISRS_GEN_C
+    else
+        echo "    IDT_setGate(${i}, ISR${i}, IDT_ATTRIBUTE_32BIT_INTERRUPT_GATE | IDT_ATTRIBUTE_DPL_RING0 | IDT_ATTRIBUTE_PRESENT_BIT);" >> $ISRS_GEN_C
+    fi
 done
 
 

@@ -28,6 +28,7 @@
 #include <mem_manager/vmalloc.h>
 
 void __attribute__((cdecl)) task_switch(process_t *previous, process_t *next);
+void __attribute__((cdecl)) switch_to_usermode(uint32_t stack, uint32_t ip);
 
 process_t* PROCESS_current;
 process_t* PROCESS_idle;
@@ -159,8 +160,6 @@ void spawnProcess()
 
     entryPoint = PROCESS_current->entryPoint;
 
-    log_debug("spawnProcess", "process id: %lld, process virtual pdbr 0x%x", PROCESS_current->id, getPDBR());
-
     unlock_scheduler(); // unlocks beacause a task switch locks the scheduler
     entryPoint();
 }
@@ -244,10 +243,7 @@ void PROCESS_createKernelProcess(void* task)
 {
     process_t* proc = kmalloc(sizeof(process_t));
 
-    // here I'm using the esp0 field to store the starting address of the heap just to make
-    // dealocation easier but otherwise this field must be null since it's a kernel process
     proc->esp0 = vmalloc(1);
-
     proc->esp = proc->esp0 + 0x1000 - 4;
 
     *(uint32_t*)proc->esp = (uint32_t)spawnProcess; // return address after task_switch

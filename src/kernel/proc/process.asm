@@ -50,3 +50,31 @@ task_switch:
     pop esi
     pop ebx
     ret
+
+global switch_to_usermode
+switch_to_usermode:
+    ; make new call frame
+    push ebp             ; save old call frame
+    mov ebp, esp         ; initialize new call frame
+
+    mov ax, (4 * 8) | 3 ; ring 3 data with bottom 2 bits set for ring 3
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    ; set up the stack frame iret expects
+    push (4 * 8) | 3    ; user SS
+    mov eax, [ebp+8]
+    push eax            ; ESP
+    pushf               ; EFLAGS
+    push (3 * 8) | 3    ; user CS
+    mov eax, [ebp+12]
+    push eax            ; EIP
+
+    iret
+
+    ; restore old call frame
+    mov esp, ebp
+    pop ebp
+    ret
