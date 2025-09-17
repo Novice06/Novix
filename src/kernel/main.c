@@ -99,6 +99,18 @@ void taskD()
     PROCESS_terminate();
 }
 
+void init_process()
+{
+    SYSCALL_initialize();
+
+    PROCESS_createKernelProcess(taskA);
+    PROCESS_createKernelProcess(taskB);
+    PROCESS_createKernelProcess(taskC);
+    PROCESS_createKernelProcess(taskD);
+
+    PROCESS_terminate();
+}
+
 void __attribute__((cdecl)) start(Boot_info* info)
 {
     // calculate the kernel size and memset the bss section
@@ -117,15 +129,10 @@ void __attribute__((cdecl)) start(Boot_info* info)
     HEAP_initialize();
     VMALLOC_initialize();
 
-    SYSCALL_initialize();
-
     puts(logo);
 
-    PROCESS_initializeMultiTasking();
-    PROCESS_createKernelProcess(taskA);
-    PROCESS_createKernelProcess(taskB);
-    PROCESS_createKernelProcess(taskC);
-    PROCESS_createKernelProcess(taskD);
+    PROCESS_initialize();
+    PROCESS_createKernelProcess(init_process);
 
     for(;;)
     {

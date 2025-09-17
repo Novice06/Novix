@@ -126,3 +126,9 @@ The initialization steps are as follows:
 2. **Virtual Memory Manager** Responsible for creating and managing paging structures, address spaces, and mapping. See 📄 [03_VIRTMEM_initialize.md](03_VIRTMEM_initialize.md)
 3. **Kernel Heap Manager** Provides dynamic memory allocation (`kmalloc`, etc.) inside the kernel space. See 📄 [04_HEAP_initialize.md](04_HEAP_initialize.md)
 4. **Page-Aligned Allocator (4KB)** A specialized allocator that ensures 4KB alignment for page-level memory usage. See 📄 [05_VMALLOC_initialize.md](05_VMALLOC_initialize.md)
+
+### Process Management System
+
+The Novix kernel implements a preemptive multitasking system using a round-robin scheduler. This implementation was heavily inspired by [an OSDev tutorial](Brendan_MultiTasking_Tutorial.pdf) and provides essential process management capabilities including process creation, scheduling, and cleanup.
+
+More details can be found in the dedicated document: 📄 [06_PROCESS_initialize.md](06_PROCESS_initialize.md)

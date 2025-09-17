@@ -198,7 +198,7 @@ void cleaner_task()
     
 }
 
-void PROCESS_initializeMultiTasking()
+void PROCESS_initialize()
 {
     // create the first process which is the idle process
     PROCESS_idle = kmalloc(sizeof(process_t));

@@ -26,11 +26,11 @@ typedef enum{DEAD, RUNNING, READY, BLOCKED, WAITING}status_t;
 
 typedef struct process
 {
-    void* cr3;
-    void* esp;
-    void* esp0;
-    void* virt_cr3;
-    bool usermode;
+    void* cr3;      // physical address of the page directory
+    void* esp;      // current address of the stack
+    void* esp0;     // kernel mode stack address
+    void* virt_cr3; // virtual address of the page directory
+    bool usermode;  // usermode or kernel process 
     void* entryPoint;
     uint64_t id;
     status_t state;
@@ -45,7 +45,7 @@ void unblock_task(process_t* proc);
 
 void yield();
 process_t* PROCESS_getCurrent();
-void PROCESS_initializeMultiTasking();
+void PROCESS_initialize();
 void PROCESS_createKernelProcess(void* task);
 void PROCESS_terminate();
 
