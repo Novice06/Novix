@@ -1,6 +1,6 @@
-# 🛠️ NOVIX Compilation Guide
+# NOVIX Compilation Guide
 
-## 📦 Prerequisites
+## Prerequisites
 
 Before compiling this project, ensure the following tools are installed on your system:
 
@@ -9,11 +9,9 @@ Before compiling this project, ensure the following tools are installed on your 
 - `i686-elf-gcc`
 - `i686-elf-ld`
 
-> ⚠️ **Important**: These tools **must be referenced using their absolute paths** in the main `Makefile`.
-
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### 1. Edit the Makefile
 
@@ -51,11 +49,11 @@ The compiled binary will be generated in the output directory specified in your 
 
 ---
 
-## 🚀 Running the OS
+## Running the OS
 
 After compilation, you can run the NOVIX operating system using one of the following options:
 
-### ✅ Using QEMU
+### Using QEMU
 
 Run the following script to launch NOVIX with QEMU:
 
@@ -63,7 +61,7 @@ Run the following script to launch NOVIX with QEMU:
 ./run.sh
 ```
 
-### ✅ Using Bochs
+### Using Bochs
 
 Alternatively, to launch NOVIX using Bochs, run:
 
@@ -79,18 +77,34 @@ Alternatively, to launch NOVIX using Bochs, run:
 
 ---
 
-## 📝 Notes
+## debugging
 
-- ✅ You **must use** the cross-compiler `i686-elf-gcc`.  
-  ❌ **Do not** use your system’s default `gcc`.
+we use QEMU with the GDB remote stub.
 
-- 🔍 If you're unsure where `libgcc.a` is located, you can search for it with:
+**Running the Kernel in QEMU with GDB:**
 
-  ```bash
-  find / -name "libgcc.a" 2>/dev/null
-  ```
+1. Start QEMU in debug mode:
+```bash
+qemu-system-i386 -s -S -debugcon stdio -m 64M -fda build/main.img
+```
 
-  Then, update the `LIBGCC_PATH` variable in your `Makefile` with the absolute path found.
+2. Start GDB (in a another terminal):
+```bash
+gdb build/kernel.elf
+```
+
+3. Connect to QEMU:
+```bash
+(gdb) target remote localhost:1234
+```
+
+4. Set breakpoints (for example at start or any function you want to inspect):
+```bash
+(gdb) break start
+(gdb) continue
+```
+
+
 
 ---
 

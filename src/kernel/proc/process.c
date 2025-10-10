@@ -239,7 +239,7 @@ void PROCESS_initialize()
     __isMultitaskingEnable = true;
 }
 
-void PROCESS_createKernelProcess(void* task)
+void PROCESS_createProcess(void* task, bool is_usermode)
 {
     process_t* proc = kmalloc(sizeof(process_t));
 
@@ -254,7 +254,7 @@ void PROCESS_createKernelProcess(void* task)
     proc->virt_cr3 = (void*)VIRTMEM_createAddressSpace();    // allocate 4kb and create the new pdbr
     proc->cr3 = (void*)VIRTMEM_getPhysAddr(proc->virt_cr3);    // store the physical address of the new pdbr
 
-    proc->usermode = false;
+    proc->usermode = is_usermode;
     proc->entryPoint = task;
     proc->id = __id_dispatcher++;
 

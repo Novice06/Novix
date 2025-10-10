@@ -60,7 +60,7 @@ void taskA()
         printf("I'm task A\n");
     }
 
-    //PROCESS_createKernelProcess(taskC);
+    PROCESS_createProcess(taskC, false);
     PROCESS_terminate();
 }
 
@@ -73,7 +73,7 @@ void taskB()
         printf("I'm task B\n");
     }
 
-    //PROCESS_createKernelProcess(taskD);
+    PROCESS_createProcess(taskD, false);
     PROCESS_terminate();
 }
 
@@ -84,7 +84,7 @@ void taskC()
         //sleep(400);
         printf("I'm task C\n");
     }
-    //PROCESS_createKernelProcess(taskA);
+    PROCESS_createProcess(taskA, false);
     PROCESS_terminate();
 }
 
@@ -95,18 +95,65 @@ void taskD()
         //sleep(200);
         printf("I'm task D\n");
     }
-    //PROCESS_createKernelProcess(taskB);
+    PROCESS_createProcess(taskB, false);
     PROCESS_terminate();
+}
+
+void user()
+{
+    // org 0x400000
+    // bits 32
+    // main:
+
+    //     mov ecx, 5
+
+    // .loop:
+    //     mov eax, 0x1
+    //     mov ebx, string
+
+    //     int 0x80    ; syscall
+
+    //     jmp .loop	; printing forever
+
+    // ;    call exit
+
+    // ;exit:
+    // ;    mov eax, 0x0
+    // ;    int 0x80
+
+    // ;    ret
+
+    // string db "[USER 1] this is a usermode program !", 13, 10, 0
+
+    unsigned char user_bin[] = {
+    0xb9, 0x05, 0x00, 0x00, 0x00, 0xb8, 0x01, 0x00, 0x00, 0x00, 0xbb, 0x13,
+    0x00, 0x40, 0x00, 0xcd, 0x80, 0xeb, 0xf2, 0x5b, 0x55, 0x53, 0x45, 0x52,
+    0x20, 0x31, 0x5d, 0x20, 0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20,
+    0x61, 0x20, 0x75, 0x73, 0x65, 0x72, 0x6d, 0x6f, 0x64, 0x65, 0x20, 0x70,
+    0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x20, 0x21, 0x0d, 0x0a, 0x00
+    };
+
+    unsigned int user_bin_len = 59;
+
+    //for(;;);
+
+    void __attribute__((cdecl)) switch_to_usermode(uint32_t stack, uint32_t ip);
+
+
+    VIRTMEM_mapPage((void*)0x400000, false);  // mapping 4mb to usermode pages
+    memcpy((void*)0x400000, user_bin, user_bin_len);
+    VIRTMEM_mapPage((void*)(0xc0000000 - 4), false);  // mapping the stack for usermode
+    switch_to_usermode(0xc0000000 - 4, 0x400000);
 }
 
 void init_process()
 {
     SYSCALL_initialize();
 
-    PROCESS_createKernelProcess(taskA);
-    PROCESS_createKernelProcess(taskB);
-    PROCESS_createKernelProcess(taskC);
-    PROCESS_createKernelProcess(taskD);
+    PROCESS_createProcess(taskA, false);
+    PROCESS_createProcess(taskB, false);
+
+    PROCESS_createProcess(user, true);  // usermode program
 
     PROCESS_terminate();
 }
@@ -132,7 +179,7 @@ void __attribute__((cdecl)) start(Boot_info* info)
     puts(logo);
 
     PROCESS_initialize();
-    PROCESS_createKernelProcess(init_process);
+    PROCESS_createProcess(init_process, false);
 
     for(;;)
     {

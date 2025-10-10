@@ -23,6 +23,8 @@
 #include <mem_manager/physmem_manager.h>
 #include <mem_manager/virtmem_manager.h>
 #include <mem_manager/vmalloc.h>
+#include <proc/lock.h>
+#include <proc/process.h>
 #include <memory.h>
 
 //============================================================================
@@ -231,7 +233,7 @@ uint32_t* VIRTMEM_createAddressSpace()
 
     memcpy(new_pagedirectory, page_directory, 0x1000);  // copy the page directory
 
-    for(int i = 1; i < 768; i++)
+    for(int i = PDE_INDEX(0x400000); i < PDE_INDEX(0xc0000000); i++)
         new_pagedirectory[i] = 0;   // unmap all the page from 4mb to 3gb
 
     // recurcive mapping here
@@ -243,17 +245,33 @@ uint32_t* VIRTMEM_createAddressSpace()
 // this function suppose that you provide a virtual address of the page directory
 void VIRTMEM_destroyAddressSpace(PDE* page_directory)
 {
-    /*
-        IMPORTANT: this functions is meant to be called inside a cleaner process because it's overwrite
-        the pages between 4mb and 3gb for deallocation purpose
-    */
+    // /*
+    //     IMPORTANT: this functions is meant to be called inside a cleaner process because it's overwrite
+    //     the pages between 4mb and 3gb for deallocation purpose
+    // */
 
-    PDE* current_page_directory = (PDE*)0xFFFFF000; // virtual addresse of the current page directory
+    // PDE* current_page_directory = (PDE*)0xFFFFF000; // virtual addresse of the current page directory
 
-    // we need to deallocate all allocated page between 4mb and 3gb
-    // so we need to first get access of those pages
-    for(int i = 1; i < 768; i++)
-        current_page_directory[i] = page_directory[i];   // map all the page from 4mb to 3gb
+    // // we need to deallocate all allocated page between 4mb and 3gb
+    // // so we need to first get access of those pages
+    // for(int i = 1; i < 768; i++)
+    //     current_page_directory[i] = page_directory[i];   // map all the page from 4mb to 3gb
+
+    // // unmap pages from 4mb to 3gb
+    // for(int i = 0x400000; i < 0xc0000000; i += 0x1000)
+    //     VIRTMEM_unMapPage((void*)i);
+
+    // // unmap page tables from 4mb to 3gb
+    // for(int i = 0x400000; i < 0xc0000000; i += 0x400000)
+    //     VIRTMEM_unMapTable((void*)i);
+
+    lock_scheduler();
+
+    PROCESS_getCurrent()->cr3 = VIRTMEM_getPhysAddr(page_directory); // in case a context switch occurs
+    uint32_t* current_page_directory = getPDBR();   // save this direcotry
+    switchPDBR(VIRTMEM_getPhysAddr(page_directory));
+
+    unlock_scheduler();
 
     // unmap pages from 4mb to 3gb
     for(int i = 0x400000; i < 0xc0000000; i += 0x1000)
@@ -262,6 +280,14 @@ void VIRTMEM_destroyAddressSpace(PDE* page_directory)
     // unmap page tables from 4mb to 3gb
     for(int i = 0x400000; i < 0xc0000000; i += 0x400000)
         VIRTMEM_unMapTable((void*)i);
+
+
+    lock_scheduler();
+
+    PROCESS_getCurrent()->cr3 = current_page_directory; // restoring ...
+    switchPDBR(current_page_directory);
+
+    unlock_scheduler();
 
     vfree(page_directory);
 }

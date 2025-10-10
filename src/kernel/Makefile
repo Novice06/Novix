@@ -10,6 +10,7 @@ CFLAG=-ffreestanding -nostdlib -std=c99 -g -I include -I $(abspath $(LIB_DIR))
 
 LD?=/home/novice/cross/i686-elf/bin/i686-elf-ld
 LDFLAG=-T linker.ld -nostdlib -L $(LIBGCC_PATH)
+LDFLAG-ELF=-T linker-elf.ld -nostdlib -L $(LIBGCC_PATH)
 
 
 HEADERS_C = $(wildcard *.h) \
@@ -43,7 +44,7 @@ LIB_OBJECT =	$(wildcard $(BUILD_DIR)/lib/*.obj) \
 			$(wildcard $(BUILD_DIR)/lib/*/*/*.obj) \
 			$(wildcard $(BUILD_DIR)/lib/*/*/*/*.obj) \
 
-kernel: isr_generator $(BUILD_DIR)/kernel.bin
+kernel: isr_generator $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/kernel.elf
 
 isr_generator:
 	@sed -i 's/\r//' hal/isr_generator.sh
@@ -62,4 +63,8 @@ $(BUILD_DIR)/kernel/asm/%.obj: %.asm $(HEADERS_ASM)
 
 $(BUILD_DIR)/kernel.bin: $(OBJECTS_ASM) $(OBJECTS_C)
 	@$(LD) $(LDFLAG) -o $@ $^ $(LIB_OBJECT) -lgcc -Map $(BUILD_DIR)/kernel.map
+	@echo "--> Created:  kernel.bin"
+
+$(BUILD_DIR)/kernel.elf: $(OBJECTS_ASM) $(OBJECTS_C)
+	@$(LD) $(LDFLAG-ELF) -o $@ $^ $(LIB_OBJECT) -lgcc -Map $(BUILD_DIR)/kernel.map
 	@echo "--> Created:  kernel.bin"

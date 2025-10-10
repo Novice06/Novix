@@ -46,7 +46,7 @@ void unblock_task(process_t* proc);
 void yield();
 process_t* PROCESS_getCurrent();
 void PROCESS_initialize();
-void PROCESS_createKernelProcess(void* task);
+void PROCESS_createProcess(void* task, bool is_usermode);
 void PROCESS_terminate();
 
 bool PROCESS_isMultitaskingEnabled();
