@@ -19,9 +19,10 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <proc/process.h>
-#include <hal/irq.h>
+#include <multitasking/process.h>
 
-void sleep(uint64_t ms);
-void timer(Registers* reg);
+void add_READY_process(process_t* proc, bool high_priority);
+process_t* PROCESS_getCurrent();
+
+void yield();
+void SCHEDULER_initialize();

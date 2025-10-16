@@ -2,7 +2,6 @@
     "files.associations": {
         "io.h": "c",
         "gdt.h": "c",
-        "heap.h": "c",
-        "memory.h": "c"
+        "heap.h": "c"
     }
 }

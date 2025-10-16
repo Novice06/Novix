@@ -24,7 +24,15 @@ global task_switch
 task_switch:
 
     mov eax, [esp+4]    ; previous task
-    mov ebx, [esp+8]   ; next task
+    mov ecx, [esp+8]    ; next task
+
+    ;Notes:
+    ; For cdecl; EAX, ECX, and EDX are already saved by the caller and
+    ; don't need to be saved again
+    ; EIP is already saved on the stack by the caller's "CALL" instruction
+    ; The task isn't able to change CR3 so it doesn't need to be saved
+    ; Segment registers are constants (while running kernel code) so they
+    ; don't need to be saved
 
     push ebx
     push esi
@@ -32,13 +40,13 @@ task_switch:
     push ebp
     pushf
 
-    mov ecx, [eax+CR3_OFFSET]   ; previous cr3
-    mov edx, [ebx+CR3_OFFSET]   ; next cr3
+    mov ebx, [eax+CR3_OFFSET]   ; previous cr3
+    mov edx, [ecx+CR3_OFFSET]   ; next cr3
 
     mov [eax+ESP_OFFSET], esp   ; save previous stack
-    mov esp, [ebx+ESP_OFFSET]   ; load new stack
+    mov esp, [ecx+ESP_OFFSET]   ; load new stack
 
-    cmp ecx, edx
+    cmp ebx, edx
     je .sameVAS
 
     mov cr3, edx
@@ -74,7 +82,7 @@ switch_to_usermode:
 
     iret
 
-    ; restore old call frame
+    ; restore old call frame (never goes there)
     mov esp, ebp
     pop ebp
     ret

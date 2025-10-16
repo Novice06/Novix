@@ -19,10 +19,6 @@
 #include <vfs/vfs.h>
 #include <drivers/e9_port.h>
 #include <drivers/vga_text.h>
-#include <proc/process.h>
-#include <proc/lock.h>
-
-mutex_t VFS_mutex;
 
 //============================================================================
 //    INTERFACE FUNCTIONS
@@ -30,31 +26,17 @@ mutex_t VFS_mutex;
 
 size_t VFS_write(fd_t fd, const void *buffer, size_t size)
 {
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&VFS_mutex);
-
 	switch (fd)
     {
     case VFS_FD_STDOUT:
     case VFS_FD_STDERR:
         for (size_t i = 0; i < size; i++)
             VGA_putc(*((uint8_t*)buffer+i));
-
-        if(PROCESS_isMultitaskingEnabled())
-            release_mutex(&VFS_mutex);
-
         return size;
 
     case VFS_FD_DEBUG:
         for (size_t i = 0; i < size; i++)
 			E9_putc((*(uint8_t*)buffer+i));
-
-        if(PROCESS_isMultitaskingEnabled())
-            release_mutex(&VFS_mutex);
-        
         return size;
     }
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&VFS_mutex);
 }

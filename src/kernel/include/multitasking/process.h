@@ -28,25 +28,20 @@ typedef struct process
 {
     void* cr3;      // physical address of the page directory
     void* esp;      // current address of the stack
+
     void* esp0;     // kernel mode stack address
     void* virt_cr3; // virtual address of the page directory
+
     bool usermode;  // usermode or kernel process 
+    uint32_t id;
     void* entryPoint;
-    uint64_t id;
+
     status_t state;
     struct process *next;
 } __attribute__((packed)) process_t;
 
-void lock_scheduler();
-void unlock_scheduler();
+void __attribute__((cdecl)) task_switch(process_t *previous, process_t *next);
+void __attribute__((cdecl)) switch_to_usermode(uint32_t stack, uint32_t ip);
 
-void block_task(status_t reason);
-void unblock_task(process_t* proc);
-
-void yield();
-process_t* PROCESS_getCurrent();
-void PROCESS_initialize();
-void PROCESS_createProcess(void* task, bool is_usermode);
-void PROCESS_terminate();
-
-bool PROCESS_isMultitaskingEnabled();
+void PROCESS_initialize(process_t* idle);
+void PROCESS_createAndSchedule(void* entryPoint, bool is_usermode);

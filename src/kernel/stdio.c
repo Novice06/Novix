@@ -20,8 +20,6 @@
 
 #include <stdio.h>
 #include <hal/io.h>
-#include <proc/process.h>
-#include <proc/lock.h>
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -31,8 +29,6 @@
 //============================================================================
 
 const char g_HexChars[] = "0123456789abcdef";
-
-mutex_t STDIO_mutex;
 
 //============================================================================
 //    INTERFACE FUNCTIONS
@@ -54,17 +50,11 @@ void fputc(char c, fd_t file)
 
 void fputs(const char* str, fd_t file)
 {
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&STDIO_mutex);
-
     while(*str)
     {
         fputc(*str, file);
         str++;
     }
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&STDIO_mutex);
 }
 
 /*
@@ -90,9 +80,6 @@ void fprintf_unsigned(fd_t file, unsigned long long number, int radix)
     char buffer[32];
     int pos = 0;
 
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&STDIO_mutex);
-
     // convert number to ASCII
     do 
     {
@@ -104,25 +91,16 @@ void fprintf_unsigned(fd_t file, unsigned long long number, int radix)
     // print number in reverse order
     while (--pos >= 0)
         fputc(buffer[pos], file);
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&STDIO_mutex);
 }
 
 void fprintf_signed(fd_t file, long long number, int radix)
 {
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&STDIO_mutex);
-
     if (number < 0)
     {
         fputc('-', file);
         fprintf_unsigned(file, -number, radix);
     }
     else fprintf_unsigned(file, number, radix);
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&STDIO_mutex);
 }
 
 void vfprintf(fd_t file, const char* fmt, va_list args)
@@ -132,9 +110,6 @@ void vfprintf(fd_t file, const char* fmt, va_list args)
     int radix = 10;
     bool sign = false;
     bool number = false;
-
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&STDIO_mutex);
 
     while (*fmt)
     {
@@ -261,9 +236,6 @@ void vfprintf(fd_t file, const char* fmt, va_list args)
 
         fmt++;
     }
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&STDIO_mutex);
 }
 
 void fprintf(fd_t file, const char* fmt, ...)
@@ -277,9 +249,6 @@ void fprintf(fd_t file, const char* fmt, ...)
 void fprint_buffer(fd_t file, const char* msg, const void* buffer, uint32_t count)
 {
     const uint8_t* u8Buffer = (const uint8_t*)buffer;
-
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&STDIO_mutex);
     
     fputs(msg, file);
     for (uint16_t i = 0; i < count; i++)
@@ -288,9 +257,6 @@ void fprint_buffer(fd_t file, const char* msg, const void* buffer, uint32_t coun
         fputc(g_HexChars[u8Buffer[i] & 0xF], file);
     }
     fputs("\n", file);
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&STDIO_mutex);
 }
 
 void putc(char c)

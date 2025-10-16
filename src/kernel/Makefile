@@ -67,4 +67,4 @@ $(BUILD_DIR)/kernel.bin: $(OBJECTS_ASM) $(OBJECTS_C)
 
 $(BUILD_DIR)/kernel.elf: $(OBJECTS_ASM) $(OBJECTS_C)
 	@$(LD) $(LDFLAG-ELF) -o $@ $^ $(LIB_OBJECT) -lgcc -Map $(BUILD_DIR)/kernel.map
-	@echo "--> Created:  kernel.bin"
+	@echo "--> Created:  kernel.elf (for debugging)"

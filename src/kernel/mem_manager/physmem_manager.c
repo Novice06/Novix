@@ -23,8 +23,6 @@
 #include <mem_manager/physmem_manager.h>
 #include <memory.h>
 #include <utility.h>
-#include <proc/process.h>
-#include <proc/lock.h>
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
@@ -53,8 +51,6 @@ uint32_t PHYSMEM_totalBlockNumber   = 0;
 uint32_t PHYSMEM_totalFreeBlock     = 0;
 uint32_t PHYSMEM_totalUsedBlock     = 0;
 uint32_t PHYSMEM_bitmapSize;
-
-mutex_t PHYSMEM_mutex;
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE FUNCTION PROTOTYPES
@@ -251,25 +247,14 @@ bool PHYSMEM_initialize(Boot_info* info, uint32_t kernel_size)
 
 void* PHYSMEM_AllocBlock()
 {
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&PHYSMEM_mutex);
-
     uint32_t block = PHYSMEM_firstFreeBlock();
 
     if(block == -1)
-    {
-        if(PROCESS_isMultitaskingEnabled())
-            release_mutex(&PHYSMEM_mutex);
-
         return NULL;
-    }
     
     PHYSMEM_setBlockToUsed(block);
     PHYSMEM_totalUsedBlock++;
     PHYSMEM_totalFreeBlock--;
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&PHYSMEM_mutex);
 
     return (void*)(block * BLOCK_SIZEKB * 0x400);
 }
@@ -282,9 +267,6 @@ void* PHYSMEM_AllocBlocks(uint8_t block_size)
 
     if(block_size > PHYSMEM_totalFreeBlock)
         return NULL;
-
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&PHYSMEM_mutex);
     
     index = PHYSMEM_firstFreeBlock();
     block_addr = index;
@@ -301,9 +283,6 @@ void* PHYSMEM_AllocBlocks(uint8_t block_size)
                 PHYSMEM_totalFreeBlock--;
             }
             
-            if(PROCESS_isMultitaskingEnabled())
-                release_mutex(&PHYSMEM_mutex);
-
             return (void*)(block_addr * BLOCK_SIZEKB * 0x400);
         }
 
@@ -317,9 +296,6 @@ void* PHYSMEM_AllocBlocks(uint8_t block_size)
 
         count++;
     }
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&PHYSMEM_mutex);
     
     return NULL;
 }
@@ -329,26 +305,17 @@ void PHYSMEM_freeBlock(void* ptr)
     if(!ptr)
         return;
 
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&PHYSMEM_mutex);
-
     uint32_t block = (uint32_t)ptr / (BLOCK_SIZEKB * 0x400);
 
     PHYSMEM_setBlockToFree(block);
     PHYSMEM_totalUsedBlock--;
     PHYSMEM_totalFreeBlock++;
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&PHYSMEM_mutex);
 }
 
 void PHYSMEM_freeBlocks(void* ptr, uint8_t size)
 {
     if(!ptr)
         return;
-
-    if(PROCESS_isMultitaskingEnabled())
-        acquire_mutex(&PHYSMEM_mutex);
 
     uint32_t block = (uint32_t)ptr / (BLOCK_SIZEKB * 0x400);
 
@@ -358,7 +325,4 @@ void PHYSMEM_freeBlocks(void* ptr, uint8_t size)
         PHYSMEM_totalUsedBlock--;
         PHYSMEM_totalFreeBlock++;
     }
-
-    if(PROCESS_isMultitaskingEnabled())
-        release_mutex(&PHYSMEM_mutex);
 }
