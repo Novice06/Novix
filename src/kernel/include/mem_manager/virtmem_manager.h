@@ -63,6 +63,9 @@ bool VIRTMEM_unMapPage (void* virt);
 void VIRTMEM_freePage(PTE* entry);
 bool VIRTMEM_allocPage(PTE* entry, uint32_t flags);
 
+uint32_t* VIRTMEM_createAddressSpace();
+void VIRTMEM_destroyAddressSpace(PDE* page_directory);
+
 void __attribute__((cdecl)) enablePaging();
 void __attribute__((cdecl)) flushTLB(uint32_t* virtual_addr);
 void* __attribute__((cdecl)) getPDBR();

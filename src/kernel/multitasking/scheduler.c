@@ -21,6 +21,7 @@
 #include <debug.h>
 #include <hal/gdt.h>
 #include <multitasking/process.h>
+#include <multitasking/time.h>
 
 void __attribute__((cdecl)) task_switch(process_t *previous, process_t *next);
 
@@ -107,4 +108,6 @@ void SCHEDULER_initialize()
 
     PROCESS_current = &PROCESS_idle;
     PROCESS_current->state = RUNNING;
+
+    IRQ_registerNewHandler(0, timer);   // pit interrupt
 }

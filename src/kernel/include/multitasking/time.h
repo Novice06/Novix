@@ -20,30 +20,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdbool.h>
+#include <hal/irq.h>
 
-typedef enum{DEAD, RUNNING, READY, BLOCKED, WAITING}status_t;
-
-typedef struct process
-{
-    void* cr3;      // physical address of the page directory
-    void* esp;      // current address of the stack
-
-    void* esp0;     // kernel mode stack address
-    void* virt_cr3; // virtual address of the page directory
-
-    bool usermode;  // usermode or kernel process 
-    uint32_t id;
-    void* entryPoint;
-
-    status_t state;
-    struct process *next;
-} __attribute__((packed)) process_t;
-
-void block_task(status_t reason);
-void unblock_task(process_t* proc);
-
-void PROCESS_initialize(process_t* idle);
-void PROCESS_createFrom(void* entryPoint);
-void PROCESS_createFromByteArray(void* array, int length, bool is_usermode);
-void PROCESS_terminate();
+void sleep(uint64_t ms);
+void timer(Registers* reg);

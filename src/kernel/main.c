@@ -28,8 +28,10 @@
 #include <mem_manager/virtmem_manager.h>
 #include <mem_manager/heap.h>
 #include <mem_manager/vmalloc.h>
+#include <syscall/syscall.h>
 #include <multitasking/scheduler.h>
 #include <multitasking/process.h>
+#include <multitasking/time.h>
 
 const char logo[] = 
 "\
@@ -50,22 +52,86 @@ extern uint8_t __end;
 extern uint8_t __bss_start;
 extern uint8_t __bss_end;
 
+// void init_process()
+// {
+//     SYSCALL_initialize();
+
+//     PROCESS_createProcess(taskA, false);
+//     PROCESS_createProcess(taskB, false);
+
+//     PROCESS_createProcess(user, true);  // usermode program
+
+//     PROCESS_terminate();
+// }
+
+unsigned char user_bin[] = {
+0xb9, 0x05, 0x00, 0x00, 0x00, 0xb8, 0x01, 0x00, 0x00, 0x00, 0xbb, 0x2c,
+0x00, 0x40, 0x00, 0xcd, 0x80, 0xb8, 0x03, 0x00, 0x00, 0x00, 0xbb, 0xf4,
+0x01, 0x00, 0x00, 0xcd, 0x80, 0xe2, 0xe6, 0xe8, 0x00, 0x00, 0x00, 0x00,
+0xb8, 0x00, 0x00, 0x00, 0x00, 0xcd, 0x80, 0xc3, 0x5b, 0x55, 0x53, 0x45,
+0x52, 0x20, 0x41, 0x5d, 0x20, 0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73,
+0x20, 0x61, 0x20, 0x75, 0x73, 0x65, 0x72, 0x6d, 0x6f, 0x64, 0x65, 0x20,
+0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x20, 0x21, 0x0d, 0x0a, 0x00
+};
+// org 0x400000
+// bits 32
+// main:
+
+//     mov ecx, 5
+
+// .loop:
+//     mov eax, 0x1
+//     mov ebx, string
+
+//     int 0x80    ; syscall
+    
+//     mov eax, 0x3
+//     mov ebx, 500
+//     int 0x80	; sleeping
+
+//     loop .loop	; printing ecx time
+
+//     call exit
+
+// exit:
+//     mov eax, 0x0
+//     int 0x80
+
+//     ret
+
+// string db "[USER A] this is a usermode program !", 13, 10, 0
+
+unsigned int user_bin_len = 84;
+
+void other_task()
+{
+    sleep(350);
+    printf("I'm another task\n");
+
+    PROCESS_terminate();
+}
+
 void taskA()
 {
-    for(;;)
+    for(int i = 0; i < 5; i++)
     {
-        printf("I'm Task A :)\n");
-        yield();
+        printf("I'm task A\n");
+        sleep(350);
     }
+
+    PROCESS_createFrom(other_task);
+    PROCESS_terminate();
 }
 
 void taskB()
 {
-    for(;;)
+    for(int i = 0; i < 5; i++)
     {
-        printf("I'm Task B :(\n");
-        yield();
+        printf("I'm task B\n");
+        sleep(200);
     }
+
+    PROCESS_terminate();
 }
 
 void __attribute__((cdecl)) start(Boot_info* info)
@@ -79,6 +145,8 @@ void __attribute__((cdecl)) start(Boot_info* info)
     log_info("kernel", "kernel start 0x%x, kernel end 0x%x", &__text_start, &__end);
     log_info("kernel", "kernel size %d Kb", roundUp_div(kernel_size, 1024));
 
+    puts(logo);
+
     HAL_initialize();
     
     PHYSMEM_initialize(info, kernel_size);
@@ -86,12 +154,13 @@ void __attribute__((cdecl)) start(Boot_info* info)
     HEAP_initialize();
     VMALLOC_initialize();
 
-    puts(logo);
-
+    SYSCALL_initialize();
     SCHEDULER_initialize();
 
-    PROCESS_createAndSchedule(taskA, false);
-    PROCESS_createAndSchedule(taskB, false);
+    PROCESS_createFrom(taskA);
+    PROCESS_createFrom(taskB);
+
+    PROCESS_createFromByteArray(user_bin, user_bin_len, true);
 
     for(;;)
     {

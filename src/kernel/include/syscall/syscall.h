@@ -19,10 +19,4 @@
 
 #pragma once
 
-#include <multitasking/process.h>
-
-process_t* PROCESS_getCurrent();
-void add_READY_process(process_t* proc, bool high_priority);
-void yield();
-
-void SCHEDULER_initialize();
+void SYSCALL_initialize();
