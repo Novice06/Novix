@@ -50,3 +50,9 @@ global HLT
 HLT:
     hlt
     ret
+
+global get_eflags
+get_eflags:
+    pushf
+    pop eax
+    ret

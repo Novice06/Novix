@@ -32,10 +32,11 @@
 #include <multitasking/scheduler.h>
 #include <multitasking/process.h>
 #include <multitasking/time.h>
+#include <multitasking/lock.h>
 
 const char logo[] = 
 "\
-            __    __   ______   __     __  ______  __    __ \n\
+             __    __   ______   __     __  ______  __    __ \n\
             |  \\  |  \\ /      \\ |  \\   |  \\|      \\|  \\  |  \\\n\
             | $$\\ | $$|  $$$$$$\\| $$   | $$ \\$$$$$$| $$  | $$\n\
             | $$$\\| $$| $$  | $$| $$   | $$  | $$   \\$$\\/  $$\n\
@@ -52,17 +53,6 @@ extern uint8_t __end;
 extern uint8_t __bss_start;
 extern uint8_t __bss_end;
 
-// void init_process()
-// {
-//     SYSCALL_initialize();
-
-//     PROCESS_createProcess(taskA, false);
-//     PROCESS_createProcess(taskB, false);
-
-//     PROCESS_createProcess(user, true);  // usermode program
-
-//     PROCESS_terminate();
-// }
 
 unsigned char user_bin[] = {
 0xb9, 0x05, 0x00, 0x00, 0x00, 0xb8, 0x01, 0x00, 0x00, 0x00, 0xbb, 0x2c,
@@ -103,33 +93,85 @@ unsigned char user_bin[] = {
 
 unsigned int user_bin_len = 84;
 
-void other_task()
+// void other_task()
+// {
+//     for(;;)
+//     {
+//         log_debug("other_task", "I'm another task, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
+//         // printf("I'm another task, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
+//     }
+
+//     PROCESS_terminate();
+// }
+
+void taskA()
 {
-    sleep(350);
-    printf("I'm another task\n");
+    for(int i = 0; i <30; i++)
+    {
+        printf("I'm task A, id: %d\n", PROCESS_getCurrent()->id);
+    }
 
     PROCESS_terminate();
 }
 
-void taskA()
+void taskB();
+void cloneTaskB()
 {
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < 100; i++)
     {
-        printf("I'm task A\n");
-        sleep(350);
+        log_debug("cloneTaskB", "I'm the clone task B, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
+        // printf("I'm the clone task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
     }
 
-    PROCESS_createFrom(other_task);
+    PROCESS_createFrom(taskB);
+    PROCESS_terminate();
+}
+
+void taskC();
+void cloneTaskC()
+{
+    for(int i = 0; i < 130; i++)
+    {
+        log_debug("cloneTaskC", "I'm the clone task C, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
+        // printf("I'm the clone task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
+    }
+
+    PROCESS_createFrom(taskC);
     PROCESS_terminate();
 }
 
 void taskB()
 {
-    for(int i = 0; i < 5; i++)
+    for(int i = 0; i < 130; i++)
     {
-        printf("I'm task B\n");
-        sleep(200);
+        log_debug("TaskB", "I'm task B, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
+        // printf("I'm task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
     }
+
+    PROCESS_createFrom(cloneTaskB);
+    PROCESS_terminate();
+}
+
+void taskC()
+{
+    for(int i = 0; i < 100; i++)
+    {
+        log_debug("TaskC", "I'm task C, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
+        // printf("I'm task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
+    }
+
+    PROCESS_createFrom(cloneTaskC);
+    PROCESS_terminate();
+}
+
+void init_process()
+{
+    SYSCALL_initialize();
+
+    PROCESS_createFrom(taskA);
+    PROCESS_createFrom(taskB);
+    PROCESS_createFrom(taskC);
+    PROCESS_createFromByteArray(user_bin, user_bin_len, true);
 
     PROCESS_terminate();
 }
@@ -154,17 +196,12 @@ void __attribute__((cdecl)) start(Boot_info* info)
     HEAP_initialize();
     VMALLOC_initialize();
 
-    SYSCALL_initialize();
     SCHEDULER_initialize();
-
-    PROCESS_createFrom(taskA);
-    PROCESS_createFrom(taskB);
-
-    PROCESS_createFromByteArray(user_bin, user_bin_len, true);
+    PROCESS_createFrom(init_process);
 
     for(;;)
     {
-        yield();
+        //yield();
         HLT();
     }
 }

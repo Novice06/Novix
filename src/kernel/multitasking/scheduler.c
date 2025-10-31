@@ -20,18 +20,19 @@
 #include <stddef.h>
 #include <debug.h>
 #include <hal/gdt.h>
+#include <hal/io.h>
 #include <multitasking/process.h>
+#include <multitasking/lock.h>
 #include <multitasking/time.h>
-
-void __attribute__((cdecl)) task_switch(process_t *previous, process_t *next);
 
 process_t PROCESS_idle;
 process_t* PROCESS_current;
 
-
 // ready list
 process_t* first_ready;
 process_t* last_ready;
+
+bool SCHEDULER_enabled;
 
 process_t* PROCESS_getCurrent()
 {
@@ -40,6 +41,9 @@ process_t* PROCESS_getCurrent()
 
 void add_READY_process(process_t* proc, bool high_priority)
 {
+    uint32_t eFlags;
+    lock_scheduler(&eFlags);
+
     proc->state = READY;
     proc->next = NULL;
 
@@ -48,6 +52,7 @@ void add_READY_process(process_t* proc, bool high_priority)
         first_ready = proc;
         last_ready = proc;
 
+        unlock_scheduler(&eFlags);
         return;
     }
 
@@ -56,11 +61,14 @@ void add_READY_process(process_t* proc, bool high_priority)
         proc->next = first_ready;
         first_ready = proc;
 
+        unlock_scheduler(&eFlags);
         return;
     }
 
     last_ready->next = proc;
     last_ready = proc;
+
+    unlock_scheduler(&eFlags);
 }
 
 process_t* schedule_next_process()
@@ -84,6 +92,9 @@ process_t* schedule_next_process()
 
 void yield()
 {
+    uint32_t eFlags;
+    lock_scheduler(&eFlags);
+
     process_t* prev = PROCESS_current;
     process_t* next = schedule_next_process();
 
@@ -100,6 +111,13 @@ void yield()
 
         task_switch(prev, next);
     }
+
+    unlock_scheduler(&eFlags);
+}
+
+bool is_schedulerEnabled()
+{
+    return SCHEDULER_enabled;
 }
 
 void SCHEDULER_initialize()
@@ -109,5 +127,6 @@ void SCHEDULER_initialize()
     PROCESS_current = &PROCESS_idle;
     PROCESS_current->state = RUNNING;
 
+    SCHEDULER_enabled = true;
     IRQ_registerNewHandler(0, timer);   // pit interrupt
 }

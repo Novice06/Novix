@@ -32,3 +32,4 @@ void __attribute__((cdecl)) panic();
 void __attribute__((cdecl)) HLT();
 void __attribute__((cdecl)) enableInterrupts();
 void __attribute__((cdecl)) disableInterrupts();
+uint32_t __attribute__((cdecl)) get_eflags();

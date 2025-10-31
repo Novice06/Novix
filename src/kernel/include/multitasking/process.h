@@ -40,10 +40,13 @@ typedef struct process
     struct process *next;
 } __attribute__((packed)) process_t;
 
-void block_task(status_t reason);
-void unblock_task(process_t* proc);
+void __attribute__((cdecl)) task_switch(process_t *previous, process_t *next);
+void __attribute__((cdecl)) switch_to_usermode(uint32_t stack, uint32_t ip);
 
 void PROCESS_initialize(process_t* idle);
 void PROCESS_createFrom(void* entryPoint);
 void PROCESS_createFromByteArray(void* array, int length, bool is_usermode);
 void PROCESS_terminate();
+
+void block_task(status_t reason);
+void unblock_task(process_t* proc, bool priority);

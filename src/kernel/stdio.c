@@ -24,11 +24,16 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+#include <multitasking/scheduler.h>
+#include <multitasking/lock.h>
+
 //============================================================================
 //    IMPLEMENTATION PRIVATE DATA
 //============================================================================
 
 const char g_HexChars[] = "0123456789abcdef";
+
+mutex_t STDIO_mutex;
 
 //============================================================================
 //    INTERFACE FUNCTIONS
@@ -266,20 +271,40 @@ void putc(char c)
 
 void puts(const char* str)
 {
+    if(is_schedulerEnabled())
+        acquire_mutex(&STDIO_mutex);
+
     fputs(str, VFS_FD_STDOUT);
+
+    if(is_schedulerEnabled())
+        release_mutex(&STDIO_mutex);
 }
 
 void printf(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
+
+    if(is_schedulerEnabled())
+        acquire_mutex(&STDIO_mutex);
+
     vfprintf(VFS_FD_STDOUT, fmt, args);
+
+    if(is_schedulerEnabled())
+        release_mutex(&STDIO_mutex);
+
     va_end(args);
 }
 
 void print_buffer(const char* msg, const void* buffer, uint32_t count)
 {
+    if(is_schedulerEnabled())
+        acquire_mutex(&STDIO_mutex);
+
     fprint_buffer(VFS_FD_STDOUT, msg, buffer, count);
+
+    if(is_schedulerEnabled())
+        release_mutex(&STDIO_mutex);
 }
 
 void debugc(char c)

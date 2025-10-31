@@ -31,9 +31,11 @@ flushTLB:
     push ebp             ; save old call frame
     mov ebp, esp         ; initialize new call frame
     
+    pushf
     cli
     invlpg [ebp+8]
     sti
+    popf
 
     ; restore old call frame
     mov esp, ebp

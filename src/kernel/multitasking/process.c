@@ -17,18 +17,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <stddef.h>
 #include <debug.h>
-#include <multitasking/process.h>
-#include <multitasking/scheduler.h>
+#include <hal/io.h>
+#include <utility.h>
+#include <memory.h>
+#include <mem_manager/virtmem_manager.h>
 #include <mem_manager/heap.h>
 #include <mem_manager/vmalloc.h>
-#include <mem_manager/virtmem_manager.h>
-#include <memory.h>
-#include <utility.h>
+#include <multitasking/scheduler.h>
+#include <multitasking/process.h>
+#include <multitasking/lock.h>
 
 #define MAX_PROCESS (1024 * 1024)
-
-void __attribute__((cdecl)) switch_to_usermode(uint32_t stack, uint32_t ip);
 
 process_t* PROCESS_list[MAX_PROCESS];
 uint32_t PROCESS_count;
@@ -38,16 +39,22 @@ process_t* terminated_tasks; // dead process list
 
 int id_dispatcher(process_t* proc)
 {
+    uint32_t eFlags;
+    lock_scheduler(&eFlags);
+
     for(int i = 0; i < MAX_PROCESS; i++)
     {
         if(PROCESS_list[i] == NULL)
         {
             PROCESS_list[i] = proc;
             PROCESS_count++;
+
+            unlock_scheduler(&eFlags);
             return i;
         }
     }
 
+    unlock_scheduler(&eFlags);
     return -1;
 }
 
@@ -58,10 +65,11 @@ void block_task(status_t reason)
     yield();
 }
 
-void unblock_task(process_t* proc)
+void unblock_task(process_t* proc, bool priority)
 {
-    add_READY_process(proc, true);
+    add_READY_process(proc, priority);
 }
+
 
 void spawnProcess()
 {
@@ -81,10 +89,15 @@ void cleaner_task()
     {
         if(terminated_tasks != NULL)
         {
+            uint32_t eFlags;
+            lock_scheduler(&eFlags);
+
             process_t* trash = terminated_tasks;
             terminated_tasks = terminated_tasks->next;
 
-            log_debug("cleaner", "cleaning 0x%x, id: %d", trash, trash->id);
+            unlock_scheduler(&eFlags);
+
+            log_warn("cleaner", "cleaning 0x%x, id: %d", trash, trash->id);
 
             vfree(trash->esp0); // deallocate the kernel stack for the process
             VIRTMEM_destroyAddressSpace(trash->virt_cr3);
@@ -98,7 +111,6 @@ void cleaner_task()
         }
 
         block_task(BLOCKED);
-        yield();
     }
     
 }
@@ -125,7 +137,7 @@ void PROCESS_initialize(process_t* idle)
     // but we can't just create it the same way we created the idle process
     // we actually need to allocate a stack and format it to allow a proper
     // context switch however this process will share the same address space with
-    // the idle process just to save up memory
+    // the idle process just to save up some memory
 
     PROCESS_cleaner.esp0 = vmalloc(1);
     PROCESS_cleaner.esp = PROCESS_cleaner.esp0 + 0x1000 - 4;
@@ -134,6 +146,7 @@ void PROCESS_initialize(process_t* idle)
 
     PROCESS_cleaner.esp -= (4 * 5);   // pushed register
     *(uint32_t*)PROCESS_cleaner.esp = 0x202;       // default eflags for the new process
+    //PROCESS_cleaner.esp -= (4 * 4);   // pushed register
 
     PROCESS_cleaner.cr3 = getPDBR();
     PROCESS_cleaner.virt_cr3 = NULL; // the cleaner task share the same virtual space with the idle process...
@@ -154,6 +167,8 @@ void PROCESS_createFrom(void* entryPoint)
 
     proc->esp -= (4 * 5);   // pushed register
     *(uint32_t*)proc->esp = 0x202;       // default eflags for the new process
+
+    //proc->esp -= (4 * 4);   // pushed register
 
     proc->virt_cr3 = VIRTMEM_createAddressSpace();
     proc->cr3 = VIRTMEM_getPhysAddr(proc->virt_cr3);    // store the physical address of the new pdbr
@@ -179,6 +194,7 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
 
     proc->esp -= (4 * 5);   // pushed register
     *(uint32_t*)proc->esp = 0x202;       // default eflags for the new process
+    //proc->esp -= (4 * 4);   // pushed register
 
     proc->virt_cr3 = VIRTMEM_createAddressSpace();
     proc->cr3 = VIRTMEM_getPhysAddr(proc->virt_cr3);    // store the physical address of the new pdbr
@@ -191,9 +207,14 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     proc->next = NULL;
 
     // because we want to write the new program's address space we need to switch pdbr
+    uint32_t eFlags;
+    lock_scheduler(&eFlags);
+
     void* currentpdbr = PROCESS_getCurrent()->cr3;
     PROCESS_getCurrent()->cr3 = proc->cr3;   // we're updating the current process in case a context switch occurs while reading the file
     switchPDBR(proc->cr3);
+
+    unlock_scheduler(&eFlags);
 
     if(is_usermode)
         VIRTMEM_mapPage((void*)(0xc0000000 - 4), false); // we need to map the stack for this process (4kb before 0xc0000000)
@@ -216,21 +237,28 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     memcpy(buffer, array, length);
 
     // restoring pdbr
+    lock_scheduler(&eFlags);
+
     PROCESS_getCurrent()->cr3 = currentpdbr;
     switchPDBR(PROCESS_getCurrent()->cr3);
+
+    unlock_scheduler(&eFlags);
 
     add_READY_process(proc, false);
 }
 
 void PROCESS_terminate()
 {
-    PROCESS_getCurrent()->state = DEAD;
+    uint32_t eFlags;
+    lock_scheduler(&eFlags);
 
+    PROCESS_getCurrent()->state = DEAD;
     PROCESS_getCurrent()->next = terminated_tasks;
     terminated_tasks = PROCESS_getCurrent();
 
     if(PROCESS_cleaner.state == BLOCKED)
-        unblock_task(&PROCESS_cleaner);
+        unblock_task(&PROCESS_cleaner, true);
     
+    unlock_scheduler(&eFlags);
     yield();
 }

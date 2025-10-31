@@ -21,9 +21,20 @@
 
 #include <multitasking/process.h>
 
-void add_READY_process(process_t* proc, bool high_priority);
-process_t* PROCESS_getCurrent();
+void lock_scheduler(uint32_t *saved_Eflags);
+void unlock_scheduler(uint32_t *saved_Eflags);
 
-void yield();
-void SCHEDULER_initialize();
-bool is_schedulerEnabled();
+typedef struct mutex
+{
+    bool locked;
+    int locked_count;
+    process_t* owner;
+    process_t* first_waiting_list;
+    process_t* last_waiting_list;
+}mutex_t;
+
+mutex_t* create_mutex();
+void destroy_mutex(mutex_t* mut);
+
+void acquire_mutex(mutex_t* mut);
+void release_mutex(mutex_t* mut);

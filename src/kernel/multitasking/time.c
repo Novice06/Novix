@@ -21,6 +21,7 @@
 #include <multitasking/time.h>
 #include <multitasking/process.h>
 #include <multitasking/scheduler.h>
+#include <multitasking/lock.h>
 #include <hal/pic.h>
 #include <hal/io.h>
 #include <mem_manager/heap.h>
@@ -39,12 +40,17 @@ uint64_t g_tickCount;
 
 void add_SLEEP_process(sleep_tasks_t* proc)
 {
+    uint32_t eFlags;
+    lock_scheduler(&eFlags);
+
     proc->back = NULL;
     proc->next = NULL;
 
     if(sleeping_tasks_list == NULL)
     {
         sleeping_tasks_list = proc;
+
+        unlock_scheduler(&eFlags);
         return;
     }
 
@@ -81,6 +87,8 @@ void add_SLEEP_process(sleep_tasks_t* proc)
 
         current->next = proc;
     }
+
+    unlock_scheduler(&eFlags);
 }
 
 
@@ -95,6 +103,8 @@ void sleep(uint64_t ms)
     add_SLEEP_process(new);
 
     block_task(WAITING);
+
+    kfree(new); // after sleeping we want to free this structure
 }
 
 void wakeUp_proc()
@@ -104,15 +114,11 @@ void wakeUp_proc()
         if(sleeping_tasks_list->wakeTime > g_tickCount)
             break;
 
-        unblock_task(sleeping_tasks_list->proc);
-
-        sleep_tasks_t* trash = sleeping_tasks_list;
+        unblock_task(sleeping_tasks_list->proc, false);
 
         sleeping_tasks_list = sleeping_tasks_list->next;
         if(sleeping_tasks_list != NULL)
             sleeping_tasks_list->back = NULL;
-
-        kfree(trash);
     }
     
 }
@@ -124,4 +130,7 @@ void timer(Registers* reg)
     g_tickCount++;
 
     wakeUp_proc();
+
+    if((g_tickCount % 10) == 0)
+        yield();
 }

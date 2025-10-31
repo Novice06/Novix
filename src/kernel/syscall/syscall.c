@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <hal/isr.h>
 #include <hal/idt.h>
+#include <hal/io.h>
 #include <multitasking/scheduler.h>
 #include <multitasking/process.h>
 #include <multitasking/time.h>
