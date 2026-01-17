@@ -21,8 +21,8 @@
 
 #include <multitasking/process.h>
 
-void lock_scheduler(uint32_t *saved_Eflags);
-void unlock_scheduler(uint32_t *saved_Eflags);
+void lock_scheduler();
+void unlock_scheduler();
 
 typedef struct mutex
 {

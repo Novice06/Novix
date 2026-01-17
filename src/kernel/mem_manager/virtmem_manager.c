@@ -253,14 +253,13 @@ uint32_t* VIRTMEM_createAddressSpace()
 // this function suppose that you provide a virtual address of the page directory
 void VIRTMEM_destroyAddressSpace(PDE* page_directory)
 {
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     PROCESS_getCurrent()->cr3 = VIRTMEM_getPhysAddr(page_directory); // in case a context switch occurs
     uint32_t* current_page_directory = getPDBR();   // save this direcotry
     switchPDBR(VIRTMEM_getPhysAddr(page_directory));
 
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 
     // unmap pages from 4mb to 3gb
     for(int i = 0x400000; i < 0xc0000000; i += 0x1000)
@@ -270,12 +269,12 @@ void VIRTMEM_destroyAddressSpace(PDE* page_directory)
     for(int i = 0x400000; i < 0xc0000000; i += 0x400000)
         VIRTMEM_unMapTable((void*)i);
 
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     PROCESS_getCurrent()->cr3 = current_page_directory; // restoring ...
     switchPDBR(current_page_directory);
     
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 
     vfree(page_directory);
 }

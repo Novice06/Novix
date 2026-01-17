@@ -41,8 +41,7 @@ process_t* PROCESS_getCurrent()
 
 void add_READY_process(process_t* proc, bool high_priority)
 {
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     proc->state = READY;
     proc->next = NULL;
@@ -52,7 +51,7 @@ void add_READY_process(process_t* proc, bool high_priority)
         first_ready = proc;
         last_ready = proc;
 
-        unlock_scheduler(&eFlags);
+        unlock_scheduler();
         return;
     }
 
@@ -61,14 +60,14 @@ void add_READY_process(process_t* proc, bool high_priority)
         proc->next = first_ready;
         first_ready = proc;
 
-        unlock_scheduler(&eFlags);
+        unlock_scheduler();
         return;
     }
 
     last_ready->next = proc;
     last_ready = proc;
 
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 }
 
 process_t* schedule_next_process()
@@ -92,8 +91,9 @@ process_t* schedule_next_process()
 
 void yield()
 {
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    // disable interrupt here
+    uint32_t eflags = get_eflags();
+    disableInterrupts();
 
     process_t* prev = PROCESS_current;
     process_t* next = schedule_next_process();
@@ -112,7 +112,9 @@ void yield()
         task_switch(prev, next);
     }
 
-    unlock_scheduler(&eFlags);
+    // enable them here
+    if(eflags & (1 << 9)) // if before locking the scheduler we were is a state where interrupt were enabled
+        enableInterrupts();
 }
 
 bool is_schedulerEnabled()

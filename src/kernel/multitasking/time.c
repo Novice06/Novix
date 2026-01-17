@@ -40,8 +40,7 @@ uint64_t g_tickCount;
 
 void add_SLEEP_process(sleep_tasks_t* proc)
 {
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     proc->back = NULL;
     proc->next = NULL;
@@ -50,7 +49,7 @@ void add_SLEEP_process(sleep_tasks_t* proc)
     {
         sleeping_tasks_list = proc;
 
-        unlock_scheduler(&eFlags);
+        unlock_scheduler();
         return;
     }
 
@@ -88,7 +87,7 @@ void add_SLEEP_process(sleep_tasks_t* proc)
         current->next = proc;
     }
 
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 }
 
 
@@ -100,9 +99,16 @@ void sleep(uint64_t ms)
     new->proc = this_proc;
     new->wakeTime = g_tickCount + ms;
 
-    add_SLEEP_process(new);
+    // disable interrupt here
+    uint32_t eflags = get_eflags();
+    disableInterrupts();    // because blocking the task must not be interrupted
 
+    add_SLEEP_process(new);
     block_task(WAITING);
+
+    // enable them here
+    if(eflags & (1 << 9)) // if before locking the scheduler we were is a state where interrupt were enabled
+        enableInterrupts();
 
     kfree(new); // after sleeping we want to free this structure
 }

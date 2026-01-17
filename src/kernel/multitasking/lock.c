@@ -20,22 +20,25 @@
 #include <stddef.h>
 #include <debug.h>
 #include <hal/io.h>
+#include <hal/pic.h>
 #include <multitasking/scheduler.h>
 #include <multitasking/lock.h>
 #include <mem_manager/heap.h>
 
-void lock_scheduler(uint32_t *saved_Eflags)
+int IRQ_disable_counter;
+
+void lock_scheduler()
 {
-    *saved_Eflags = get_eflags();     // we need to save the current state so we can re-enable interrupt in the right places
-    
-    disableInterrupts();
+    IRQ_disable_counter++;
+    if(IRQ_disable_counter == 1)    // the first time
+        PIC_mask(0);    // mask the PIT, doing it once because the pic is kinda slow...
 }
 
-void unlock_scheduler(uint32_t *saved_Eflags)
+void unlock_scheduler()
 {
-    // if before locking the scheduler we were is a state where interrupt were enabled
-    if(*saved_Eflags & (1 << 9))
-        enableInterrupts();
+    IRQ_disable_counter--;
+    if(IRQ_disable_counter == 0)
+        PIC_unMask(0);
 }
 
 mutex_t* create_mutex()
@@ -60,8 +63,7 @@ void acquire_mutex(mutex_t* mut)
 {
     process_t* current_process = PROCESS_getCurrent();
 
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     if(mut->locked)
     {
@@ -69,7 +71,7 @@ void acquire_mutex(mutex_t* mut)
         {
             mut->locked_count++;    // it's okay we can acquire a mutex multiple time
 
-            unlock_scheduler(&eFlags);
+            unlock_scheduler();
             return; 
         }
 
@@ -86,16 +88,24 @@ void acquire_mutex(mutex_t* mut)
             mut->last_waiting_list = current_process;
         }
 
-        //unlock_scheduler(&eFlags);
+        // disable interrupt here
+        uint32_t eflags = get_eflags();
+        disableInterrupts();    // because blocking the task must not be interrupted
+
+        unlock_scheduler();
 
         block_task(WAITING); // I don't know if I should keep the scheduler locked or unlocked ...
+        
+        // enable them here
+        if(eflags & (1 << 9)) // if before locking the scheduler we were is a state where interrupt were enabled
+            enableInterrupts();
 
-        //unlock_scheduler(&eFlags);
+        lock_scheduler();
     }
 
     mut->locked = true;
     mut->owner = current_process;   // new owner
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 }
 
 void release_mutex(mutex_t* mut)
@@ -111,14 +121,13 @@ void release_mutex(mutex_t* mut)
         return;
     }
 
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     if(mut->locked_count > 0)
     {
         mut->locked_count--;
 
-        unlock_scheduler(&eFlags);
+        unlock_scheduler();
         return;
     }
 
@@ -134,7 +143,7 @@ void release_mutex(mutex_t* mut)
 
         unblock_task(released, false);
 
-        unlock_scheduler(&eFlags);
+        unlock_scheduler();
         return;
     }
     else
@@ -145,5 +154,5 @@ void release_mutex(mutex_t* mut)
         mut->first_waiting_list = NULL;
         mut->last_waiting_list = NULL;
     }
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 }

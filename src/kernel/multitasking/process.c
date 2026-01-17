@@ -39,8 +39,7 @@ process_t* terminated_tasks; // dead process list
 
 int id_dispatcher(process_t* proc)
 {
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     for(int i = 0; i < MAX_PROCESS; i++)
     {
@@ -49,12 +48,12 @@ int id_dispatcher(process_t* proc)
             PROCESS_list[i] = proc;
             PROCESS_count++;
 
-            unlock_scheduler(&eFlags);
+            unlock_scheduler();
             return i;
         }
     }
 
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
     return -1;
 }
 
@@ -89,13 +88,12 @@ void cleaner_task()
     {
         if(terminated_tasks != NULL)
         {
-            uint32_t eFlags;
-            lock_scheduler(&eFlags);
+            lock_scheduler();
 
             process_t* trash = terminated_tasks;
             terminated_tasks = terminated_tasks->next;
 
-            unlock_scheduler(&eFlags);
+            unlock_scheduler();
 
             log_warn("cleaner", "cleaning 0x%x, id: %d", trash, trash->id);
 
@@ -207,14 +205,13 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     proc->next = NULL;
 
     // because we want to write the new program's address space we need to switch pdbr
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     void* currentpdbr = PROCESS_getCurrent()->cr3;
     PROCESS_getCurrent()->cr3 = proc->cr3;   // we're updating the current process in case a context switch occurs while reading the file
     switchPDBR(proc->cr3);
 
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 
     if(is_usermode)
         VIRTMEM_mapPage((void*)(0xc0000000 - 4), false); // we need to map the stack for this process (4kb before 0xc0000000)
@@ -237,20 +234,19 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     memcpy(buffer, array, length);
 
     // restoring pdbr
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     PROCESS_getCurrent()->cr3 = currentpdbr;
     switchPDBR(PROCESS_getCurrent()->cr3);
 
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
 
     add_READY_process(proc, false);
 }
 
 void PROCESS_terminate()
 {
-    uint32_t eFlags;
-    lock_scheduler(&eFlags);
+    lock_scheduler();
 
     PROCESS_getCurrent()->state = DEAD;
     PROCESS_getCurrent()->next = terminated_tasks;
@@ -259,6 +255,6 @@ void PROCESS_terminate()
     if(PROCESS_cleaner.state == BLOCKED)
         unblock_task(&PROCESS_cleaner, true);
     
-    unlock_scheduler(&eFlags);
+    unlock_scheduler();
     yield();
 }
