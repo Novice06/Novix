@@ -21,6 +21,7 @@
 
 #include <multitasking/process.h>
 
+bool is_scheduler_locked();
 void lock_scheduler();
 void unlock_scheduler();
 

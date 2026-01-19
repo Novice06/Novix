@@ -20,25 +20,37 @@
 #include <stddef.h>
 #include <debug.h>
 #include <hal/io.h>
-#include <hal/pic.h>
 #include <multitasking/scheduler.h>
 #include <multitasking/lock.h>
 #include <mem_manager/heap.h>
 
-int IRQ_disable_counter;
+int scheduler_lock_depth = 0;
+bool scheduler_locked = false;
+
+bool is_scheduler_locked()
+{
+    return scheduler_locked;
+}
 
 void lock_scheduler()
 {
-    IRQ_disable_counter++;
-    if(IRQ_disable_counter == 1)    // the first time
-        PIC_mask(0);    // mask the PIT, doing it once because the pic is kinda slow...
+    // disable interrupt here
+    uint32_t eflags = get_eflags();
+    disableInterrupts();    // because this action must not be interrupted   
+
+    scheduler_lock_depth++;
+    scheduler_locked = true;
+
+    // enable them here
+    if(eflags & (1 << 9)) // if before disabling interrupt we were is a state where interrupt were enabled
+        enableInterrupts();
 }
 
 void unlock_scheduler()
 {
-    IRQ_disable_counter--;
-    if(IRQ_disable_counter == 0)
-        PIC_unMask(0);
+    scheduler_lock_depth--;
+    if(scheduler_lock_depth == 0)
+        scheduler_locked = false;
 }
 
 mutex_t* create_mutex()
@@ -88,17 +100,11 @@ void acquire_mutex(mutex_t* mut)
             mut->last_waiting_list = current_process;
         }
 
-        // disable interrupt here
-        uint32_t eflags = get_eflags();
-        disableInterrupts();    // because blocking the task must not be interrupted
+        current_process->state = WAITING;
 
         unlock_scheduler();
 
-        block_task(WAITING); // I don't know if I should keep the scheduler locked or unlocked ...
-        
-        // enable them here
-        if(eflags & (1 << 9)) // if before locking the scheduler we were is a state where interrupt were enabled
-            enableInterrupts();
+        block_task(); // I don't know if I should keep the scheduler locked or unlocked ...
 
         lock_scheduler();
     }
@@ -139,7 +145,7 @@ void release_mutex(mutex_t* mut)
 
         mut->locked = true;
         mut->locked_count = 0;
-        mut->owner = released;  // the ownner will be set again when the released task is scheduled
+        mut->owner = released;  // the ownner will be set again when the released task is scheduled and that's OK
 
         unblock_task(released, false);
 

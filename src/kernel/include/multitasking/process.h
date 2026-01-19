@@ -48,5 +48,5 @@ void PROCESS_createFrom(void* entryPoint);
 void PROCESS_createFromByteArray(void* array, int length, bool is_usermode);
 void PROCESS_terminate();
 
-void block_task(status_t reason);
+void block_task();
 void unblock_task(process_t* proc, bool priority);

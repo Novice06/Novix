@@ -57,9 +57,16 @@ int id_dispatcher(process_t* proc)
     return -1;
 }
 
-void block_task(status_t reason)
+void block_task()
 {
-    PROCESS_getCurrent()->state = reason;
+    // blocking a task just means removing it from the ready list
+    // this is performed through the schedule_next function by checking the state of the process that yields the CPU
+    // thats why we're change the state so that this task isnt put back in the ready list
+    // but this code is commented out because a task switch can occurs right before changing the state and when scheduled again(for exemple this task was on waiting list)
+    // this code will continue and change the state then yields this will lead to a permanent block without any means to unblock it since its not on any waiting or any kind of list
+    // thats why the reponsability to change the state is on the caller side since change the state must not be interrupted
+    
+    // PROCESS_getCurrent()->state = reason;
     
     yield();
 }
@@ -108,7 +115,8 @@ void cleaner_task()
             continue;
         }
 
-        block_task(BLOCKED);
+        PROCESS_getCurrent()->state = BLOCKED;
+        block_task();
     }
     
 }
