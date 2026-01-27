@@ -68,6 +68,14 @@ mutex_t* create_mutex()
 
 void destroy_mutex(mutex_t* mut)
 {
+    while(mut->first_waiting_list != NULL)
+    {
+        process_t* proc = mut->first_waiting_list;
+        mut->first_waiting_list = mut->first_waiting_list->next;
+
+        unblock_task(proc, false);
+    }
+
     kfree(mut);
 }
 

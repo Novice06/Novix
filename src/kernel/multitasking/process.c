@@ -28,8 +28,7 @@
 #include <multitasking/scheduler.h>
 #include <multitasking/process.h>
 #include <multitasking/lock.h>
-
-#define MAX_PROCESS (1024 * 1024)
+#include <multitasking/ipc.h>
 
 process_t* PROCESS_list[MAX_PROCESS];
 uint32_t PROCESS_count;
@@ -55,6 +54,11 @@ int id_dispatcher(process_t* proc)
 
     unlock_scheduler();
     return -1;
+}
+
+process_t* PROCESS_get(uint32_t id)
+{
+    return PROCESS_list[id];
 }
 
 void block_task()
@@ -254,6 +258,8 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
 
 void PROCESS_terminate()
 {
+    destroy_endpoint();
+
     lock_scheduler();
 
     PROCESS_getCurrent()->state = DEAD;

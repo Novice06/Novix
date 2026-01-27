@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define MAX_PROCESS (1024 * 1024)
+
 typedef enum{DEAD, RUNNING, READY, BLOCKED, WAITING}status_t;
 
 typedef struct process
@@ -47,6 +49,8 @@ void PROCESS_initialize(process_t* idle);
 void PROCESS_createFrom(void* entryPoint);
 void PROCESS_createFromByteArray(void* array, int length, bool is_usermode);
 void PROCESS_terminate();
+
+process_t* PROCESS_get(uint32_t id);
 
 void block_task();
 void unblock_task(process_t* proc, bool priority);

@@ -66,6 +66,7 @@ uint32_t insert_ordered_array(type_t item, ordered_array *array)
             temp = temp2;
         }
 
+        iterator++;
         array->array[iterator] = temp;
         array->size++;
     }
