@@ -68,11 +68,13 @@ int send_msg(uint32_t receiver_id, void* data, size_t size)
             {
                 endpoints[receiver_id]->first_waiting = PROCESS_getCurrent();
                 endpoints[receiver_id]->last_waiting = PROCESS_getCurrent();
+                endpoints[receiver_id]->last_waiting->next = NULL;
             }
             else
             {
                 endpoints[receiver_id]->last_waiting->next = PROCESS_getCurrent();
                 endpoints[receiver_id]->last_waiting = PROCESS_getCurrent();
+                endpoints[receiver_id]->last_waiting->next = NULL;
             }
 
             lock_scheduler();
@@ -103,7 +105,7 @@ int send_msg(uint32_t receiver_id, void* data, size_t size)
     } while (1);
     
     lock_scheduler();
-    if(PROCESS_get(receiver_id)->state = BLOCKED)
+    if(PROCESS_get(receiver_id)->state == BLOCKED)
         unblock_task(PROCESS_get(receiver_id), false);
 
     unlock_scheduler();
@@ -133,7 +135,7 @@ bool receive_async_msg(void* dataOut, size_t *size)
         process_t* waiting_proc = endpoints[index]->first_waiting;
 
         endpoints[index]->first_waiting = endpoints[index]->first_waiting->next;
-        if(endpoints[index]->first_waiting = NULL)
+        if(endpoints[index]->first_waiting == NULL)
             endpoints[index]->last_waiting = NULL;
 
         unblock_task(waiting_proc, false);
@@ -141,8 +143,14 @@ bool receive_async_msg(void* dataOut, size_t *size)
 
     release_mutex(endpoints[index]->msg_lock);
 
-    *size = received_msg->size;
-    memcpy(dataOut, received_msg->data, *size);
+    if(dataOut != NULL)
+    {
+        if(size != NULL)
+            *size = received_msg->size;
+        
+        memcpy(dataOut, received_msg->data, received_msg->size);
+    }
+
     kfree(received_msg);
     return true;
 }

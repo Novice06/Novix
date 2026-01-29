@@ -21,6 +21,7 @@
 #include <debug.h>
 #include <stdint.h>
 #include <utility.h>
+#include <string.h>
 #include <memory.h>
 #include <hal/hal.h>
 #include <hal/io.h>
@@ -33,6 +34,7 @@
 #include <multitasking/process.h>
 #include <multitasking/time.h>
 #include <multitasking/lock.h>
+#include <multitasking/ipc.h>
 
 const char logo[] = 
 "\
@@ -54,113 +56,80 @@ extern uint8_t __bss_start;
 extern uint8_t __bss_end;
 
 
-unsigned char user_bin[] = {
-0xb9, 0x05, 0x00, 0x00, 0x00, 0xb8, 0x01, 0x00, 0x00, 0x00, 0xbb, 0x2c,
-0x00, 0x40, 0x00, 0xcd, 0x80, 0xb8, 0x03, 0x00, 0x00, 0x00, 0xbb, 0xf4,
-0x01, 0x00, 0x00, 0xcd, 0x80, 0xe2, 0xe6, 0xe8, 0x00, 0x00, 0x00, 0x00,
-0xb8, 0x00, 0x00, 0x00, 0x00, 0xcd, 0x80, 0xc3, 0x5b, 0x55, 0x53, 0x45,
-0x52, 0x20, 0x41, 0x5d, 0x20, 0x74, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73,
-0x20, 0x61, 0x20, 0x75, 0x73, 0x65, 0x72, 0x6d, 0x6f, 0x64, 0x65, 0x20,
-0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x20, 0x21, 0x0d, 0x0a, 0x00
-};
-// org 0x400000
-// bits 32
-// main:
-
-//     mov ecx, 5
-
-// .loop:
-//     mov eax, 0x1
-//     mov ebx, string
-
-//     int 0x80    ; syscall
-    
-//     mov eax, 0x3
-//     mov ebx, 500
-//     int 0x80	; sleeping
-
-//     loop .loop	; printing ecx time
-
-//     call exit
-
-// exit:
-//     mov eax, 0x0
-//     int 0x80
-
-//     ret
-
-// string db "[USER A] this is a usermode program !", 13, 10, 0
-
-unsigned int user_bin_len = 84;
-
-// void other_task()
-// {
-//     for(;;)
-//     {
-//         log_debug("other_task", "I'm another task, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
-//         // printf("I'm another task, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
-//     }
-
-//     PROCESS_terminate();
-// }
-
-void taskA()
-{
-    for(int i = 0; i <30; i++)
-    {
-        printf("I'm task A, id: %d\n", PROCESS_getCurrent()->id);
-    }
-
-    PROCESS_terminate();
-}
-
-void taskB();
-void cloneTaskB()
-{
-    for(int i = 0; i < 100; i++)
-    {
-        log_debug("cloneTaskB", "I'm the clone task B, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
-        // printf("I'm the clone task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
-    }
-
-    PROCESS_createFrom(taskB);
-    PROCESS_terminate();
-}
-
-void taskC();
-void cloneTaskC()
-{
-    for(int i = 0; i < 130; i++)
-    {
-        log_debug("cloneTaskC", "I'm the clone task C, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
-        // printf("I'm the clone task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
-    }
-
-    PROCESS_createFrom(taskC);
-    PROCESS_terminate();
-}
+uint32_t taskA_id;
 
 void taskB()
 {
-    for(int i = 0; i < 130; i++)
+    for(;;)
     {
-        log_debug("TaskB", "I'm task B, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
-        // printf("I'm task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
+        if(send_msg(taskA_id, "Hello From Task B", strlen("Hello From Task B")) != 0)
+        {
+            log_debug("taskB", "what the fuck happened");
+            // panic();
+        }
+        else
+        {
+            // sleep(100);
+            log_err("taskB", "sent, 0x%x", PROCESS_getCurrent());
+        }
     }
-
-    PROCESS_createFrom(cloneTaskB);
-    PROCESS_terminate();
 }
 
 void taskC()
 {
-    for(int i = 0; i < 100; i++)
+    for(;;)
     {
-        log_debug("TaskC", "I'm task C, id: %d, eflags: 0x%x", PROCESS_getCurrent()->id, get_eflags());
-        // printf("I'm task B, id: %d, eflags: 0x%x\n", PROCESS_getCurrent()->id, get_eflags());
+        if(send_msg(taskA_id, "Hey I'm The Task C", strlen("Hey I'm The Task C")) != 0)
+        {
+            log_debug("taskC", "what the fuck happened");
+            // panic();
+        }
+        else
+        {
+            // sleep(100);
+            log_warn("taskC", "sent, 0x%x", PROCESS_getCurrent());
+        }
+    }
+}
+
+void another_task()
+{
+    for(;;)
+    {
+        if(send_msg(taskA_id, "This is another task", strlen("This is another task")) != 0)
+        {
+            log_debug("another_task", "what the fuck happened");
+            // panic();
+        }
+        else
+        {
+            // sleep(100);
+            log_debug("another_task", "sent, 0x%x", PROCESS_getCurrent());
+        }
+    }
+}
+
+void taskA()
+{
+    uint8_t data[MAX_MESSAGE_SIZE];
+    size_t size;
+
+    taskA_id = PROCESS_getCurrent()->id;
+    open_inbox();
+
+    PROCESS_createFrom(taskB);
+    PROCESS_createFrom(taskC);
+    PROCESS_createFrom(another_task);
+
+    for(int i = 405; i > 0; i--)//int i = 5; i > 0; i--
+    {
+        receive_msg(data, &size);
+        data[size] = 0;
+
+        printf("Received Data : %s, size: %d\n", data, size);
+        sleep(10);
     }
 
-    PROCESS_createFrom(cloneTaskC);
     PROCESS_terminate();
 }
 
@@ -169,9 +138,9 @@ void init_process()
     SYSCALL_initialize();
 
     PROCESS_createFrom(taskA);
-    PROCESS_createFrom(taskB);
-    PROCESS_createFrom(taskC);
-    PROCESS_createFromByteArray(user_bin, user_bin_len, true);
+    // PROCESS_createFrom(taskB);
+    // PROCESS_createFrom(taskC);
+    // PROCESS_createFromByteArray(user_bin, user_bin_len, true);
 
     PROCESS_terminate();
 }
