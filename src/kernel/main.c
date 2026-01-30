@@ -34,7 +34,7 @@
 #include <multitasking/process.h>
 #include <multitasking/time.h>
 #include <multitasking/lock.h>
-#include <multitasking/ipc.h>
+#include <multitasking/ipc/message.h>
 
 const char logo[] = 
 "\
@@ -73,6 +73,8 @@ void taskB()
             log_err("taskB", "sent, 0x%x", PROCESS_getCurrent());
         }
     }
+
+    PROCESS_terminate();
 }
 
 void taskC()
@@ -90,6 +92,8 @@ void taskC()
             log_warn("taskC", "sent, 0x%x", PROCESS_getCurrent());
         }
     }
+
+    PROCESS_terminate();
 }
 
 void another_task()
@@ -107,6 +111,8 @@ void another_task()
             log_debug("another_task", "sent, 0x%x", PROCESS_getCurrent());
         }
     }
+
+    PROCESS_terminate();
 }
 
 void taskA()
@@ -121,7 +127,7 @@ void taskA()
     PROCESS_createFrom(taskC);
     PROCESS_createFrom(another_task);
 
-    for(int i = 405; i > 0; i--)//int i = 5; i > 0; i--
+    for(;;)//int i = 5; i > 0; i--
     {
         receive_msg(data, &size);
         data[size] = 0;

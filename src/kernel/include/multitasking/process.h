@@ -25,6 +25,15 @@
 #define MAX_PROCESS (1024 * 1024)
 
 typedef enum{DEAD, RUNNING, READY, BLOCKED, WAITING}status_t;
+typedef enum { REGION_CODE, REGION_HEAP, REGION_STACK, REGION_SHM } region_type_t;
+
+typedef struct vm_region {
+    uint32_t start;
+    uint32_t end;
+    region_type_t type;
+    uint32_t shm_id; // Only if type == REGION_SHM
+    struct vm_region* next;
+} vm_region_t;
 
 typedef struct process
 {
@@ -37,6 +46,8 @@ typedef struct process
     bool usermode;  // usermode or kernel process 
     uint32_t id;
     void* entryPoint;
+
+    vm_region_t* regions;
 
     status_t state;
     struct process *next;

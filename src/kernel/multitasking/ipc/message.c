@@ -25,7 +25,7 @@
 #include <multitasking/process.h>
 #include <multitasking/lock.h>
 #include <multitasking/time.h>
-#include <multitasking/ipc.h>
+#include <multitasking/ipc/message.h>
 
 #define MAX_MESSAGES 256
 

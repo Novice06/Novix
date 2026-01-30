@@ -28,7 +28,7 @@
 #include <multitasking/scheduler.h>
 #include <multitasking/process.h>
 #include <multitasking/lock.h>
-#include <multitasking/ipc.h>
+#include <multitasking/ipc/message.h>
 
 process_t* PROCESS_list[MAX_PROCESS];
 uint32_t PROCESS_count;
@@ -141,6 +141,8 @@ void PROCESS_initialize(process_t* idle)
     idle->entryPoint = NULL;
     idle->id = id_dispatcher(idle);
 
+    idle->regions = NULL;
+
     idle->next = NULL;
 
     // the cleaner process is also not meant to be terminated
@@ -163,6 +165,7 @@ void PROCESS_initialize(process_t* idle)
     PROCESS_cleaner.usermode = false;
     PROCESS_cleaner.entryPoint = cleaner_task;
     PROCESS_cleaner.id = id_dispatcher(&PROCESS_cleaner);
+    PROCESS_cleaner.regions = NULL;
     PROCESS_cleaner.state = BLOCKED;    // initially this process is blocked and will be unblocked when there is a task termination
 }
 
@@ -187,6 +190,7 @@ void PROCESS_createFrom(void* entryPoint)
     proc->entryPoint = entryPoint;
 
     proc->id = id_dispatcher(proc); // WARNING: should check if there is more room for this process
+    proc->regions = NULL;
 
     proc->next = NULL;
 
@@ -213,6 +217,7 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     proc->entryPoint = is_usermode ? (void*)0x400000 : (void*)0xe0000000;
 
     proc->id = id_dispatcher(proc); // WARNING: should check if there is more room for this process
+    proc->regions = NULL;
 
     proc->next = NULL;
 
@@ -226,7 +231,30 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     unlock_scheduler();
 
     if(is_usermode)
+    {
         VIRTMEM_mapPage((void*)(0xc0000000 - 4), false); // we need to map the stack for this process (4kb before 0xc0000000)
+        
+        vm_region_t* code = kmalloc(sizeof(vm_region_t));
+        code->start = 0x400000;
+        code->end = code->start + length;
+        code->type = REGION_CODE;
+
+        vm_region_t* heap = kmalloc(sizeof(vm_region_t));
+        heap->start = code->end;
+        heap->end = heap->start + 0x20000000;   // 512 Mo for the heap
+        heap->type = REGION_HEAP;
+
+        vm_region_t* stack = kmalloc(sizeof(vm_region_t));
+        stack->start = 0xBFF00000;
+        stack->end = 0xC0000000;   // 1 Mo for the stack
+        stack->type = REGION_HEAP;
+
+
+        code->next = heap;
+        heap->next = stack;
+
+        proc->regions = code;
+    }
     
     /*
      * WARNING !! because 0xe0000000 is a higher half address it's identity mapped in every process
