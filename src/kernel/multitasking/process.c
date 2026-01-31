@@ -29,6 +29,7 @@
 #include <multitasking/process.h>
 #include <multitasking/lock.h>
 #include <multitasking/ipc/message.h>
+#include <multitasking/ipc/shared_memory.h>
 
 process_t* PROCESS_list[MAX_PROCESS];
 uint32_t PROCESS_count;
@@ -114,6 +115,13 @@ void cleaner_task()
             PROCESS_list[trash->id] = NULL;
             PROCESS_count--;
 
+            vm_region_t* region = trash->regions;
+            while (region != NULL)
+            {
+                kfree(region);
+                region = region->next;
+            }
+            
             kfree(trash);
 
             continue;
@@ -167,6 +175,8 @@ void PROCESS_initialize(process_t* idle)
     PROCESS_cleaner.id = id_dispatcher(&PROCESS_cleaner);
     PROCESS_cleaner.regions = NULL;
     PROCESS_cleaner.state = BLOCKED;    // initially this process is blocked and will be unblocked when there is a task termination
+
+    shared_memory_init();   // intialize the shared_memory system
 }
 
 void PROCESS_createFrom(void* entryPoint)
@@ -233,25 +243,26 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     if(is_usermode)
     {
         VIRTMEM_mapPage((void*)(0xc0000000 - 4), false); // we need to map the stack for this process (4kb before 0xc0000000)
-        
+
         vm_region_t* code = kmalloc(sizeof(vm_region_t));
         code->start = 0x400000;
-        code->end = code->start + length;
+        code->length = roundUp_div(length, 0x1000); // page size
         code->type = REGION_CODE;
 
         vm_region_t* heap = kmalloc(sizeof(vm_region_t));
-        heap->start = code->end;
-        heap->end = heap->start + 0x20000000;   // 512 Mo for the heap
+        heap->start = code->start + (code->length * 0x1000);
+        heap->length = roundUp_div(0x20000000, 0x1000);   // 512 Mo for the heap
         heap->type = REGION_HEAP;
 
         vm_region_t* stack = kmalloc(sizeof(vm_region_t));
         stack->start = 0xBFF00000;
-        stack->end = 0xC0000000;   // 1 Mo for the stack
+        stack->length = roundUp_div(0x100000, 0x1000);   // 1 Mo for the stack
         stack->type = REGION_HEAP;
 
 
         code->next = heap;
         heap->next = stack;
+        stack->next = NULL;
 
         proc->regions = code;
     }
@@ -284,9 +295,80 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     add_READY_process(proc, false);
 }
 
+void* PROCESS_createNewRegion(region_type_t type, uint32_t length, uint64_t shm_id)
+{
+    vm_region_t* regions = PROCESS_getCurrent()->regions;
+    if(regions == NULL)
+    {
+        uint32_t limit = (0xC0000000 - 0x400000) / 0x1000; // in 4KB block
+        if(length > limit)
+            return NULL;
+
+        vm_region_t* new = kmalloc(sizeof(vm_region_t));
+        new->start = 0x400000;
+        new->length = length;
+        new->type = type;
+
+        if(REGION_SHM == type)
+            new->shm_id = shm_id;
+
+        new->next = NULL;
+        PROCESS_getCurrent()->regions = new;
+
+        return (void*)0x400000;
+    }
+    else
+    {
+        while (1)
+        {
+            if(regions->next == NULL)
+            {
+                uint32_t limit = (0xC0000000 - regions->start) / 0x1000 + regions->length; // in 4KB block
+                if(length > limit)
+                    return NULL;
+
+                vm_region_t* new = kmalloc(sizeof(vm_region_t));
+                new->start = regions->start + regions->length * 0x1000;
+                new->length = length;
+                new->type = type;
+
+                if(REGION_SHM == type)
+                    new->shm_id = shm_id;
+
+                new->next = NULL;
+                regions->next = new;
+                
+                return (void*)new->start;
+            }
+
+            uint32_t available_size = (regions->next->start - regions->start) / 0x1000 + regions->length; // in 4KB block
+            if(length > available_size)
+            {
+                regions = regions->next;
+                continue;
+            }
+
+            vm_region_t* new = kmalloc(sizeof(vm_region_t));
+            new->start = regions->start + regions->length * 0x1000;
+            new->length = length;
+            new->type = type;
+
+            if(REGION_SHM == type)
+                new->shm_id = shm_id;
+
+            new->next = regions->next;
+            regions->next = new;
+            
+            return (void*)new->start;
+        }
+        
+    }
+}
+
 void PROCESS_terminate()
 {
     destroy_endpoint();
+    shared_memory_detachAll();
 
     lock_scheduler();
 

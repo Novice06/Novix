@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <utility.h>
 #include <string.h>
+#include <list.h>
 #include <memory.h>
 #include <hal/hal.h>
 #include <hal/io.h>
@@ -35,6 +36,7 @@
 #include <multitasking/time.h>
 #include <multitasking/lock.h>
 #include <multitasking/ipc/message.h>
+#include <multitasking/ipc/shared_memory.h>
 
 const char logo[] = 
 "\
@@ -57,61 +59,49 @@ extern uint8_t __bss_end;
 
 
 uint32_t taskA_id;
+uint64_t shared_id;
+
+void spy_task()
+{
+    uint32_t* base = shared_memory_attach(shared_id);
+    log_warn("spy_task", "attached successfully at: 0x%x\n", base);
+
+    for(;;)
+    {
+        sleep(1000);
+        log_debug("spy_task", "spying every 1sec");
+        log_info("spy", "just read: %s", base);
+    }
+
+    PROCESS_terminate();
+}
 
 void taskB()
 {
+    uint32_t my_id = PROCESS_getCurrent()->id;
+    shared_id = shared_memory_create(1);
+    printf("id shared: 0x%llx\n", shared_id);
+
+    uint32_t* base = shared_memory_attach(shared_id);
+    printf("attached successfully at: 0x%x\n", base);
+
+    send_msg(taskA_id, &shared_id, sizeof(uint64_t));       // send the shared memory id
+
+    PROCESS_createFrom(spy_task);   // lauching the spy process
+    open_inbox();
+    send_msg(taskA_id, &my_id, sizeof(uint32_t));           // sending my id so
+
     for(;;)
     {
-        if(send_msg(taskA_id, "Hello From Task B", strlen("Hello From Task B")) != 0)
-        {
-            log_debug("taskB", "what the fuck happened");
-            // panic();
-        }
-        else
-        {
-            // sleep(100);
-            log_err("taskB", "sent, 0x%x", PROCESS_getCurrent());
-        }
+        sleep(500);
+        memcpy(base, "you're speaking with TaskB MotherFucker\0", 41);
+        send_msg(taskA_id, NULL, 0);    // like sending a signal
+
+        receive_msg(NULL, NULL);    // task A must issue a signal to  acknowelgde that he finished writing
+        printf("Task A said: %s\n", base);
     }
 
-    PROCESS_terminate();
-}
-
-void taskC()
-{
-    for(;;)
-    {
-        if(send_msg(taskA_id, "Hey I'm The Task C", strlen("Hey I'm The Task C")) != 0)
-        {
-            log_debug("taskC", "what the fuck happened");
-            // panic();
-        }
-        else
-        {
-            // sleep(100);
-            log_warn("taskC", "sent, 0x%x", PROCESS_getCurrent());
-        }
-    }
-
-    PROCESS_terminate();
-}
-
-void another_task()
-{
-    for(;;)
-    {
-        if(send_msg(taskA_id, "This is another task", strlen("This is another task")) != 0)
-        {
-            log_debug("another_task", "what the fuck happened");
-            // panic();
-        }
-        else
-        {
-            // sleep(100);
-            log_debug("another_task", "sent, 0x%x", PROCESS_getCurrent());
-        }
-    }
-
+    sleep(1000);
     PROCESS_terminate();
 }
 
@@ -124,17 +114,24 @@ void taskA()
     open_inbox();
 
     PROCESS_createFrom(taskB);
-    PROCESS_createFrom(taskC);
-    PROCESS_createFrom(another_task);
 
-    for(;;)//int i = 5; i > 0; i--
+    receive_msg(data, &size);   // waiting for shared memory id
+
+    uint32_t* base = shared_memory_attach(*(uint64_t*)data);
+    printf("attached successfully at: 0x%x\n", base);
+
+    receive_msg(data, &size);   // waiting for process id we're sharing data with
+
+    for (;;)
     {
-        receive_msg(data, &size);
-        data[size] = 0;
+        receive_msg(NULL, NULL);    // this is like waiting for a signal
+        printf("What I read: %s\n", base);
 
-        printf("Received Data : %s, size: %d\n", data, size);
-        sleep(10);
+        sleep(700);
+        memcpy(base, "Hello This is taskA Who is to the other side ?\0", 48);
+        send_msg(*(uint32_t*)data, NULL, 0);    // like sending a signal
     }
+    
 
     PROCESS_terminate();
 }
@@ -170,6 +167,8 @@ void __attribute__((cdecl)) start(Boot_info* info)
     VIRTMEM_initialize(kernel_size);
     HEAP_initialize();
     VMALLOC_initialize();
+
+    List_init(kmalloc, kfree);
 
     SCHEDULER_initialize();
     PROCESS_createFrom(init_process);

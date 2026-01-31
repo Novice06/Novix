@@ -60,6 +60,9 @@ bool VIRTMEM_unMapTable(void* virt);
 bool VIRTMEM_mapPage (void* virt, bool kernel_mode);
 bool VIRTMEM_unMapPage (void* virt);
 
+bool VIRTMEM_mapPageCustom (void* phys, void* virt, bool kernel_mode);
+void* VIRTMEM_unMapPageCustom (void* virt);
+
 void VIRTMEM_freePage(PTE* entry);
 bool VIRTMEM_allocPage(PTE* entry, uint32_t flags);
 

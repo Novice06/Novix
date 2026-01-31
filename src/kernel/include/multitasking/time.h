@@ -24,3 +24,4 @@
 
 void sleep(uint64_t ms);
 void timer(Registers* reg);
+uint64_t get_tikCount();

@@ -20,9 +20,31 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
 
-void shared_memory_init();
-uint64_t shared_memory_create(uint32_t length);
-void* shared_memory_attach(uint64_t id);
-void shared_memory_detach(uint64_t id);
-void shared_memory_detachAll();
+typedef void* (*memAlloc)(size_t __size);
+typedef void (*memFree)(void* __ptr);
+
+struct listNode
+{
+    void* payload;
+    struct listNode* next;
+    struct listNode* prev;
+    
+};
+
+typedef struct list {
+    uint32_t count;
+    struct listNode* root;
+}list_t;
+
+void List_init(memAlloc mallocFunc, memFree freeFunc);
+
+list_t* create_newList();
+
+int list_add(list_t* list, void* payload);
+
+void* list_getAt(list_t* list, uint32_t index);
+void* list_removeAt(list_t* list, uint32_t index);
+
+void list_merge(list_t* dest, list_t* src);

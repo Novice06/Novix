@@ -129,13 +129,19 @@ void wakeUp_proc()
     
 }
 
+uint64_t get_tikCount()
+{
+    return g_tickCount;
+}
+
 void timer(Registers* reg)
 {
     PIC_sendEndOfInterrupt(0);
 
     g_tickCount++;
 
-    wakeUp_proc();
+    if(!is_scheduler_locked())  // if its not locked
+            wakeUp_proc();      // To avoid race condition (for ex if were modifing the ready list structure)
 
     if((g_tickCount % 10) == 0)
     {

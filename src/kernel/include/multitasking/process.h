@@ -29,9 +29,9 @@ typedef enum { REGION_CODE, REGION_HEAP, REGION_STACK, REGION_SHM } region_type_
 
 typedef struct vm_region {
     uint32_t start;
-    uint32_t end;
+    uint32_t length;    // Length in 4KB blocks
     region_type_t type;
-    uint32_t shm_id; // Only if type == REGION_SHM
+    uint64_t shm_id;    // Only if type == REGION_SHM
     struct vm_region* next;
 } vm_region_t;
 
@@ -61,6 +61,7 @@ void PROCESS_createFrom(void* entryPoint);
 void PROCESS_createFromByteArray(void* array, int length, bool is_usermode);
 void PROCESS_terminate();
 
+void* PROCESS_createNewRegion(region_type_t type, uint32_t length, uint64_t shm_id);
 process_t* PROCESS_get(uint32_t id);
 
 void block_task();

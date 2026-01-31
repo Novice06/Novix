@@ -275,11 +275,11 @@ void* PHYSMEM_AllocBlock()
     return (void*)(block * BLOCK_SIZEKB * 0x400);
 }
 
-void* PHYSMEM_AllocBlocks(uint8_t block_size)
+void* PHYSMEM_AllocBlocks(uint32_t block_size)
 {
     uint32_t index;
     uint32_t block_addr;
-    uint8_t count;
+    uint32_t count;
 
     if(block_size > PHYSMEM_totalFreeBlock)
         return NULL;
@@ -343,7 +343,7 @@ void PHYSMEM_freeBlock(void* ptr)
         release_mutex(&PHYSMEM_mutex);
 }
 
-void PHYSMEM_freeBlocks(void* ptr, uint8_t size)
+void PHYSMEM_freeBlocks(void* ptr, uint32_t size)
 {
     if(!ptr)
         return;
@@ -353,7 +353,7 @@ void PHYSMEM_freeBlocks(void* ptr, uint8_t size)
 
     uint32_t block = (uint32_t)ptr / (BLOCK_SIZEKB * 0x400);
 
-    for(int i = 0; i < size; i++)
+    for(uint32_t i = 0; i < size; i++)
     {
         PHYSMEM_setBlockToFree(block + i);
         PHYSMEM_totalUsedBlock--;

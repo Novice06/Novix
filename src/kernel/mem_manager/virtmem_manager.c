@@ -163,6 +163,59 @@ bool VIRTMEM_unMapPage (void* virt)
     return true;
 }
 
+bool VIRTMEM_mapPageCustom (void* phys, void* virt, bool kernel_mode)
+{
+    // in case this page table doesn't exist
+    if(!VIRTMEM_mapTable(virt, kernel_mode))
+        return false;
+
+    PDE* page_directory = (PDE*)0xFFFFF000; // virtual addresse of the page directory
+
+    uint32_t pageTableIndex = PDE_INDEX((uint32_t)virt);
+    PTE* page_table = (PTE*)(0xFFC00000 + (pageTableIndex << 12));   // virtuall addresse of the page table
+
+    uint32_t pageEntryIndex = PTE_INDEX((uint32_t)virt);
+    if((page_table[pageEntryIndex] & PTE_PAGE_PRESENT) == PTE_PAGE_PRESENT)
+        return true; // page already mapped nothing to do
+
+    if(kernel_mode)
+    {
+        page_table[pageEntryIndex] = PAGE_ADD_ATTRIBUTE((PTE)phys, PTE_PAGE_PRESENT | PTE_PAGE_WRITE | PTE_PAGE_KERNEL_MODE);
+    }
+    else
+    {
+        page_table[pageEntryIndex] = PAGE_ADD_ATTRIBUTE((PTE)phys, PTE_PAGE_PRESENT | PTE_PAGE_WRITE | PTE_PAGE_USER_MODE);
+    }
+        
+    
+    flushTLB(virt);
+    return true;
+}
+
+void* VIRTMEM_unMapPageCustom (void* virt)
+{
+    if((uint32_t)virt >= 0xFFC00000) // arealdy used by recursive mapping
+        return false;
+
+    PDE* page_directory = (PDE*)0xFFFFF000; // virtual addresse of the page directory
+    
+    uint32_t pageTableIndex = PDE_INDEX((uint32_t)virt);
+    PTE* page_table = (PTE*)(0xFFC00000 + (pageTableIndex << 12));   // virtuall addresse of the page table
+
+    if((page_directory[pageTableIndex] & PDE_PRESENT) != PDE_PRESENT)
+        return NULL;    // already unmapped
+
+    uint32_t pageEntryIndex = PTE_INDEX((uint32_t)virt);
+    if((page_table[pageEntryIndex] & PTE_PAGE_PRESENT) != PTE_PAGE_PRESENT)
+        return NULL; // page already unmapped nothing to do
+
+    void* ret = VIRTMEM_getPhysAddr(virt);
+    page_table[pageEntryIndex] = 0x0;   // page not present
+    
+    flushTLB(virt);
+    return ret;
+}
+
 uint32_t* VIRTMEM_getPhysAddr(void* virt)
 {   
     uint32_t pageTableIndex = PDE_INDEX((uint32_t)virt);

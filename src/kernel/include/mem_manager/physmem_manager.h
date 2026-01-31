@@ -28,5 +28,5 @@
 bool PHYSMEM_initialize(Boot_info* info, uint32_t kernel_size);
 void PHYSMEM_freeBlock(void* ptr);
 void* PHYSMEM_AllocBlock();
-void* PHYSMEM_AllocBlocks(uint8_t blocks);
-void PHYSMEM_freeBlocks(void* ptr, uint8_t size);
+void* PHYSMEM_AllocBlocks(uint32_t blocks);
+void PHYSMEM_freeBlocks(void* ptr, uint32_t size);
