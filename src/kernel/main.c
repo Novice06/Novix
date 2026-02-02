@@ -57,81 +57,180 @@ extern uint8_t __end;
 extern uint8_t __bss_start;
 extern uint8_t __bss_end;
 
+/*
 
-uint32_t taskA_id;
-uint64_t shared_id;
+org 0x400000
+bits 32
+main:
 
-void spy_task()
-{
-    uint32_t* base = shared_memory_attach(shared_id);
-    log_warn("spy_task", "attached successfully at: 0x%x\n", base);
+    mov eax, 3  ; open inbox to be able to receive messages
+    int 0x80
 
-    for(;;)
-    {
-        sleep(1000);
-        log_debug("spy_task", "spying every 1sec");
-        log_info("spy", "just read: %s", base);
-    }
+    mov eax, 8	; request a shared memory
+    mov ebx, 1  ; request 1Mb resulting in a 4k block
+    int 0x80
 
-    PROCESS_terminate();
-}
+    ; now we have the id of shared memory in edx:ecx
+    mov [shared_id], ecx
+    mov [shared_id+4], edx
 
-void taskB()
-{
-    uint32_t my_id = PROCESS_getCurrent()->id;
-    shared_id = shared_memory_create(1);
-    printf("id shared: 0x%llx\n", shared_id);
+    mov eax, 9	; attaching the shared memory
+    int 0x80
 
-    uint32_t* base = shared_memory_attach(shared_id);
-    printf("attached successfully at: 0x%x\n", base);
+    or esi, esi
+    jnz .attached_successfully
 
-    send_msg(taskA_id, &shared_id, sizeof(uint64_t));       // send the shared memory id
+    call exit   ; failed
 
-    PROCESS_createFrom(spy_task);   // lauching the spy process
-    open_inbox();
-    send_msg(taskA_id, &my_id, sizeof(uint32_t));           // sending my id so
+.attached_successfully:
+    ; now we have the base addr of the shared memory in esi
+    mov [base], esi
 
-    for(;;)
-    {
-        sleep(500);
-        memcpy(base, "you're speaking with TaskB MotherFucker\0", 41);
-        send_msg(taskA_id, NULL, 0);    // like sending a signal
+    mov eax, 5          ; send message
+    mov ebx, 3          ; to the process with id 3
+    mov ecx, 8          ; the message is 8bytes long
+    mov esi, shared_id  ; esi has the message (the shared id)
+    int 0x80    
 
-        receive_msg(NULL, NULL);    // task A must issue a signal to  acknowelgde that he finished writing
-        printf("Task A said: %s\n", base);
-    }
+    or edx, edx
+    jz .sent_successfully
+    
+    call exit   ; failed
 
-    sleep(1000);
-    PROCESS_terminate();
-}
+.sent_successfully:
+    mov eax, 12 ; get id of the current process
+    int 0x80
+
+    ; now ebx has the id
+    mov [myid], ebx
+
+    mov eax, 5          ; send message
+    mov ebx, 3          ; to the process with id 3
+    mov ecx, 4          ; the message is 4bytes long
+    mov esi, myid       ; esi has the message (the my id)
+    int 0x80
+
+    or edx, edx
+    jz .cpy_msg
+    
+    call exit   ; failed
+
+.cpy_msg:
+
+    mov edi, [base]
+    mov esi, string
+
+.cpy_msg_loop:
+    mov al, [esi]
+    mov [edi], al
+
+    inc edi
+    inc esi
+
+    or al, al
+    jnz .cpy_msg_loop
+
+    ; sending a signal that we finished writing!
+    mov eax, 5          ; send message
+    mov ebx, 3          ; to the process with id 3
+    mov ecx, 0          ; the message is 0bytes long
+    mov esi, 0          ; NULL addresse because we are'nt sending anything
+    int 0x80
+
+    ; waiting for the process we're communicating with
+    mov eax, 7          ; wait for message
+    mov edi, 0          ; NULL we're not trying to read anything
+    mov ebx, 0          ; NULL again
+    int 0x80
+
+    mov edi, [base]
+    mov esi, [checksum]
+    mov [edi], esi
+
+    ; sending a signal that we finished writing!
+    mov eax, 5          ; send message
+    mov ebx, 3          ; to the process with id 3
+    mov ecx, 0          ; the message is 0bytes long
+    mov esi, 0          ; NULL addresse because we are'nt sending anything
+    int 0x80
+
+    ; the OS will detach the shared memory for us
+
+    call exit
+
+exit:
+    mov eax, 0x0
+    int 0x80
+
+    ret
+
+string db "Hello I'm a USER program don't trust me? here is a checksum: ", 0
+checksum dd 0xDEADC0DE
+shared_id dq 0
+myid dd 0
+base dd 0
+
+*/
+
+unsigned char user_bin[] = {
+  0xb8, 0x03, 0x00, 0x00, 0x00, 0xcd, 0x80, 0xb8, 0x08, 0x00, 0x00, 0x00,
+  0xbb, 0x01, 0x00, 0x00, 0x00, 0xcd, 0x80, 0x89, 0x0d, 0x2f, 0x01, 0x40,
+  0x00, 0x89, 0x15, 0x33, 0x01, 0x40, 0x00, 0xb8, 0x09, 0x00, 0x00, 0x00,
+  0xcd, 0x80, 0x09, 0xf6, 0x75, 0x05, 0xe8, 0xb6, 0x00, 0x00, 0x00, 0x89,
+  0x35, 0x3b, 0x01, 0x40, 0x00, 0xb8, 0x05, 0x00, 0x00, 0x00, 0xbb, 0x03,
+  0x00, 0x00, 0x00, 0xb9, 0x08, 0x00, 0x00, 0x00, 0xbe, 0x2f, 0x01, 0x40,
+  0x00, 0xcd, 0x80, 0x09, 0xd2, 0x74, 0x05, 0xe8, 0x91, 0x00, 0x00, 0x00,
+  0xb8, 0x0c, 0x00, 0x00, 0x00, 0xcd, 0x80, 0x89, 0x1d, 0x37, 0x01, 0x40,
+  0x00, 0xb8, 0x05, 0x00, 0x00, 0x00, 0xbb, 0x03, 0x00, 0x00, 0x00, 0xb9,
+  0x04, 0x00, 0x00, 0x00, 0xbe, 0x37, 0x01, 0x40, 0x00, 0xcd, 0x80, 0x09,
+  0xd2, 0x74, 0x05, 0xe8, 0x65, 0x00, 0x00, 0x00, 0x8b, 0x3d, 0x3b, 0x01,
+  0x40, 0x00, 0xbe, 0xed, 0x00, 0x40, 0x00, 0x8a, 0x06, 0x88, 0x07, 0x47,
+  0x46, 0x08, 0xc0, 0x75, 0xf6, 0xb8, 0x05, 0x00, 0x00, 0x00, 0xbb, 0x03,
+  0x00, 0x00, 0x00, 0xb9, 0x00, 0x00, 0x00, 0x00, 0xbe, 0x00, 0x00, 0x00,
+  0x00, 0xcd, 0x80, 0xb8, 0x07, 0x00, 0x00, 0x00, 0xbf, 0x00, 0x00, 0x00,
+  0x00, 0xbb, 0x00, 0x00, 0x00, 0x00, 0xcd, 0x80, 0x8b, 0x3d, 0x3b, 0x01,
+  0x40, 0x00, 0x8b, 0x35, 0x2b, 0x01, 0x40, 0x00, 0x89, 0x37, 0xb8, 0x05,
+  0x00, 0x00, 0x00, 0xbb, 0x03, 0x00, 0x00, 0x00, 0xb9, 0x00, 0x00, 0x00,
+  0x00, 0xbe, 0x00, 0x00, 0x00, 0x00, 0xcd, 0x80, 0xe8, 0x00, 0x00, 0x00,
+  0x00, 0xb8, 0x00, 0x00, 0x00, 0x00, 0xcd, 0x80, 0xc3, 0x48, 0x65, 0x6c,
+  0x6c, 0x6f, 0x20, 0x49, 0x27, 0x6d, 0x20, 0x61, 0x20, 0x55, 0x53, 0x45,
+  0x52, 0x20, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x20, 0x64, 0x6f,
+  0x6e, 0x27, 0x74, 0x20, 0x74, 0x72, 0x75, 0x73, 0x74, 0x20, 0x6d, 0x65,
+  0x3f, 0x20, 0x68, 0x65, 0x72, 0x65, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20,
+  0x63, 0x68, 0x65, 0x63, 0x6b, 0x73, 0x75, 0x6d, 0x3a, 0x20, 0x00, 0xde,
+  0xc0, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+unsigned int user_bin_len = 319;
 
 void taskA()
 {
     uint8_t data[MAX_MESSAGE_SIZE];
     size_t size;
+    uint32_t his_id;
 
-    taskA_id = PROCESS_getCurrent()->id;
     open_inbox();
+    PROCESS_createFromByteArray(user_bin, user_bin_len, true);
 
-    PROCESS_createFrom(taskB);
-
+    log_debug("taskA", "Ok What ?");
     receive_msg(data, &size);   // waiting for shared memory id
 
+    log_debug("taskA", "Ok What ?");
     uint32_t* base = shared_memory_attach(*(uint64_t*)data);
     printf("attached successfully at: 0x%x\n", base);
 
-    receive_msg(data, &size);   // waiting for process id we're sharing data with
+    receive_msg(data, &size);   // waiting id of the process we're communicating with
+    his_id = *(uint32_t*)data;
 
-    for (;;)
-    {
-        receive_msg(NULL, NULL);    // this is like waiting for a signal
-        printf("What I read: %s\n", base);
+    receive_msg(NULL, NULL);    // waiting for process to finish writing
 
-        sleep(700);
-        memcpy(base, "Hello This is taskA Who is to the other side ?\0", 48);
-        send_msg(*(uint32_t*)data, NULL, 0);    // like sending a signal
-    }
-    
+    puts((char*)base);
+
+    send_msg(his_id, NULL, 0);  // we signal that we finished reading
+
+    receive_msg(NULL, NULL);    // waiting for process to finish writing
+
+    printf("0x%x", *base);
 
     PROCESS_terminate();
 }

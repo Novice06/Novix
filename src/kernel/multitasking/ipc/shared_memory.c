@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <debug.h>
 #include <list.h>
+#include <utility.h>
 #include <feistel64.h>
 #include <mem_manager/physmem_manager.h>
 #include <mem_manager/virtmem_manager.h>
@@ -51,11 +52,13 @@ void shared_memory_init()
 
 uint64_t shared_memory_create(uint32_t length)
 {
+    // reject if request a 0 length
+
     shared_memory_t* new = kmalloc(sizeof(shared_memory_t));
 
-    new->length = length;
+    new->length = roundUp_div(length, 0x1000);
     new->ref_count = 0;
-    new->phys_base = PHYSMEM_AllocBlocks(length);
+    new->phys_base = PHYSMEM_AllocBlocks(new->length);
     new->id = feistel64(shm_counter++, shm_key);
 
     acquire_mutex(mutex_list);
@@ -103,10 +106,9 @@ void* shared_memory_attach(uint64_t id)
 void shared_memory_detach(uint64_t id)
 {
     shared_memory_t* mem = NULL;
-    uint32_t index;
 
     acquire_mutex(mutex_list);
-    for(index = 0; index < memories_shared->count; index++)
+    for(uint32_t index = 0; index < memories_shared->count; index++)
     {
 
         if(((shared_memory_t*)list_getAt(memories_shared, index))->id == id)
@@ -152,9 +154,16 @@ void shared_memory_detach(uint64_t id)
         if(0 == mem->ref_count)
         {
             acquire_mutex(mutex_list);
-            
-            list_removeAt(memories_shared, index);    // this time we remove it from the list
-    
+            for(uint32_t index = 0; index < memories_shared->count; index++)
+            {
+
+                if(((shared_memory_t*)list_getAt(memories_shared, index))->id == id)
+                {
+                    list_removeAt(memories_shared, index);    // this time we remove it from the list
+                    break;
+                }
+                    
+            }
             release_mutex(mutex_list);
 
             PHYSMEM_freeBlocks(mem->phys_base, mem->length);

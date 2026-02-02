@@ -25,32 +25,110 @@
 #include <multitasking/scheduler.h>
 #include <multitasking/process.h>
 #include <multitasking/time.h>
+#include <multitasking/ipc/message.h>
+#include <multitasking/ipc/shared_memory.h>
+
+typedef void (*SyscallHandler)(Registers* regs);
+
+void SYSCALL_terminate(Registers* regs)
+{
+    PROCESS_terminate();
+}
+
+void SYSCALL_yield(Registers* regs)
+{
+    yield();
+}
+
+void SYSCALL_sleep(Registers* regs)
+{
+    sleep(regs->ebx);
+}
+
+void SYSCALL_openInbox(Registers* regs)
+{
+    open_inbox();
+}
+
+void SYSCALL_closeInbox(Registers* regs)
+{
+    close_inbox();
+}
+
+void SYSCALL_send_msg(Registers* regs)
+{
+    regs->edx = send_msg(regs->ebx, (void*)regs->esi, regs->ecx);
+}
+
+void SYSCALL_receive_async_msg(Registers* regs)
+{
+    uint32_t size;
+    regs->edx = receive_async_msg((void*)regs->edi, &size);
+    regs->ebx = size;
+}
+
+void SYSCALL_receive_msg(Registers* regs)
+{
+    uint32_t size;
+    receive_msg((void*)regs->edi, &size);
+    regs->ebx = size;
+}
+
+void SYSCALL_shm_create(Registers* regs)
+{
+    uint64_t id = shared_memory_create(regs->ebx);
+
+    // edx:ecx
+    regs->ecx = id;
+    regs->edx = id >> 32;
+}
+
+void SYSCALL_shm_attach(Registers* regs)
+{
+    uint64_t id = regs->edx;
+    id = (id << 32) | regs->ecx;
+    regs->esi = (uint32_t)shared_memory_attach(id);
+}
+
+void SYSCALL_shm_detach(Registers* regs)
+{
+    uint64_t id = regs->edx;
+    id = (id << 32) | regs->ecx;
+    shared_memory_detach(id);
+}
+
+void SYSCALL_puts(Registers* regs)
+{
+    puts((uint8_t*)regs->ebx);
+}
+
+void SYSCALL_getId(Registers* regs)
+{
+    regs->ebx = PROCESS_getCurrent()->id;
+}
+
+SyscallHandler Handlers[] = {
+    [0]     = SYSCALL_terminate,
+    [1]     = SYSCALL_yield,
+    [2]     = SYSCALL_sleep,
+    [3]     = SYSCALL_openInbox,
+    [4]     = SYSCALL_closeInbox,
+    [5]     = SYSCALL_send_msg,
+    [6]     = SYSCALL_receive_async_msg,
+    [7]     = SYSCALL_receive_msg,
+    [8]     = SYSCALL_shm_create,
+    [9]     = SYSCALL_shm_attach,
+    [10]    = SYSCALL_shm_detach,
+    [11]    = SYSCALL_puts,
+    [12]    = SYSCALL_getId,
+};
 
 void SYSCALL_handler(Registers* regs)
 {
-    // this is bad we should make a table of function pointer not a switch
+    if(regs->eax > (sizeof(Handlers) / sizeof(SyscallHandler)) || Handlers[regs->eax] == NULL)
+        return;
 
-    switch (regs->eax)
-    {
-    case 0:
-        PROCESS_terminate();
-        break;
-    
-    case 1:
-        printf("%s", (uint8_t*)regs->ebx);
-        break;
-
-    case 2:
-        yield();
-        break;
-
-    case 3:
-        sleep(regs->ebx);
-        break;
-
-    default:
-        break;
-    }
+    Handlers[regs->eax](regs);
 }
 
 void SYSCALL_initialize()
