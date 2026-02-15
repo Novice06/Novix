@@ -149,6 +149,7 @@ void PROCESS_initialize(process_t* idle)
     idle->entryPoint = NULL;
     idle->id = id_dispatcher(idle);
 
+    memset(idle->resources, 0, sizeof(file_descriptor_t) * MAX_OPEN_FILES);
     idle->regions = NULL;
 
     idle->next = NULL;
@@ -173,6 +174,7 @@ void PROCESS_initialize(process_t* idle)
     PROCESS_cleaner.usermode = false;
     PROCESS_cleaner.entryPoint = cleaner_task;
     PROCESS_cleaner.id = id_dispatcher(&PROCESS_cleaner);
+    memset(PROCESS_cleaner.resources, 0, sizeof(file_descriptor_t) * MAX_OPEN_FILES);
     PROCESS_cleaner.regions = NULL;
     PROCESS_cleaner.state = BLOCKED;    // initially this process is blocked and will be unblocked when there is a task termination
 
@@ -200,6 +202,7 @@ void PROCESS_createFrom(void* entryPoint)
     proc->entryPoint = entryPoint;
 
     proc->id = id_dispatcher(proc); // WARNING: should check if there is more room for this process
+    memset(proc->resources, 0, sizeof(file_descriptor_t) * MAX_OPEN_FILES);
     proc->regions = NULL;
 
     proc->next = NULL;
@@ -227,6 +230,7 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     proc->entryPoint = is_usermode ? (void*)0x400000 : (void*)0xe0000000;
 
     proc->id = id_dispatcher(proc); // WARNING: should check if there is more room for this process
+    memset(proc->resources, 0, sizeof(file_descriptor_t) * MAX_OPEN_FILES);
     proc->regions = NULL;
 
     proc->next = NULL;
@@ -323,7 +327,7 @@ void* PROCESS_createNewRegion(region_type_t type, uint32_t length, uint64_t shm_
         {
             if(regions->next == NULL)
             {
-                uint32_t limit = (0xC0000000 - regions->start) / 0x1000 + regions->length; // in 4KB block
+                uint32_t limit = (0xC0000000 - regions->start) / 0x1000 - regions->length; // in 4KB block
                 if(length > limit)
                     return NULL;
 
@@ -341,7 +345,7 @@ void* PROCESS_createNewRegion(region_type_t type, uint32_t length, uint64_t shm_
                 return (void*)new->start;
             }
 
-            uint32_t available_size = (regions->next->start - regions->start) / 0x1000 + regions->length; // in 4KB block
+            uint32_t available_size = (regions->next->start - regions->start) / 0x1000 - regions->length; // in 4KB block
             if(length > available_size)
             {
                 regions = regions->next;
@@ -371,6 +375,9 @@ void PROCESS_terminate()
     shared_memory_detachAll();
 
     lock_scheduler();
+
+    for(int i = 0; i < MAX_OPEN_FILES; i++)
+        VFS_close(i);
 
     PROCESS_getCurrent()->state = DEAD;
     PROCESS_getCurrent()->next = terminated_tasks;

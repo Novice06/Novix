@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <vfs/vfs.h>
 
 #define MAX_PROCESS (1024 * 1024)
 
@@ -47,6 +48,7 @@ typedef struct process
     uint32_t id;
     void* entryPoint;
 
+    file_descriptor_t resources[MAX_OPEN_FILES];
     vm_region_t* regions;
 
     status_t state;

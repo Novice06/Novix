@@ -237,6 +237,19 @@ void taskA()
 
 void init_process()
 {
+    VFS_init();
+    if(VFS_mount("ramfs", NULL) == VFS_OK)
+        log_info("init_process", "ramfs mounted successfully at /");
+
+    uint8_t buffer[14];
+
+    int fd = VFS_open("/test/hello.txt", VFS_O_RDONLY);
+    log_debug("init_process", "descriptor: %d", fd);
+    VFS_read(fd, buffer, 13);
+
+    buffer[13] = '\0';
+    log_info("init_process", "%s", buffer);
+
     SYSCALL_initialize();
 
     PROCESS_createFrom(taskA);

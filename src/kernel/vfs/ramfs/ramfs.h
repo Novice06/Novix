@@ -17,14 +17,32 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-
 #pragma once
 
-const char* strchr(const char* str, char chr);
-char* strcpy(char* dst, const char* src);
-char* strncpy(char* dst, const char* src, int num);
-unsigned strlen(const char* str);
-int strcmp(const char *str1, const char *str2);
-int strncmp(const char *str1, const char *str2, int num);
-long strtol(char* start, char** end, int base);
+/* Ramfs simulates an in-memory file system with an N-ary tree, perfect for initial testing */
+
+typedef enum {
+    NODE_FILE,
+    NODE_DIRECTORY
+} nodetype_t;
+
+// Metadata structure for files and directories
+typedef struct metadata {
+    char name[VFS_MAX_FILENAME];
+    nodetype_t type;
+    uint64_t size;
+    // uint64_t create_time;
+    // uint64_t modify_time;
+    // uint64_t access_time;
+} metadata_t;
+
+// Structure of a node in the N-ary tree
+typedef struct treenode {
+    metadata_t meta;
+    struct treenode *parent;
+    struct treenode *first_child;
+    struct treenode *next_sibling;
+    uint8_t *data; // file content
+} treenode_t;
+
+void ramfs_init();

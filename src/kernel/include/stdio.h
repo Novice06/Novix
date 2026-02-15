@@ -22,6 +22,9 @@
 #include <stdarg.h>
 #include <vfs/vfs.h>
 
+
+typedef int fd_t;   // file descriptor
+
 //============================================================================
 //    INTERFACE FUNCTION PROTOTYPES
 //============================================================================

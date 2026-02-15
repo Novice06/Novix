@@ -66,6 +66,31 @@ char* strcpy(char* dst, const char* src)
     return origDst;
 }
 
+char* strncpy(char* dst, const char* src, int num)
+{
+    char* origDst = dst;
+
+    if (dst == NULL)
+        return NULL;
+
+    if (src == NULL)
+    {
+        *dst = '\0';
+        return dst;
+    }
+
+    // while (*src)
+    for(int i = 0; i < num && *src; i++)
+    {
+        *dst = *src;
+        ++src;
+        ++dst;
+    }
+    
+    *dst = '\0';
+    return origDst;
+}
+
 unsigned strlen(const char* str)
 {
     unsigned len = 0;
