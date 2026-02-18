@@ -116,8 +116,8 @@ typedef struct vnode
  */
 typedef struct vnodeops
 {
-    int (*read)(struct vnode* node, void *buffer, size_t size, uint32_t offset);
-    int (*write)(struct vnode* node, const void *buffer, size_t size, uint32_t offset);
+    int64_t (*read)(struct vnode* node, void *buffer, size_t size, uint32_t offset);
+    int64_t (*write)(struct vnode* node, const void *buffer, size_t size, uint32_t offset);
 
     /* Find a file/directory by name */
     int (*lookup)(struct vnode* node_dir, const char* name, struct vnode** result);

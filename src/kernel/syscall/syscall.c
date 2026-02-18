@@ -97,14 +97,43 @@ void SYSCALL_shm_detach(Registers* regs)
     shared_memory_detach(id);
 }
 
-void SYSCALL_puts(Registers* regs)
-{
-    puts((uint8_t*)regs->ebx);
-}
-
 void SYSCALL_getId(Registers* regs)
 {
     regs->ebx = PROCESS_getCurrent()->id;
+}
+
+void SYSCALL_open(Registers* regs)
+{
+    regs->edx = VFS_open((char*)regs->esi, regs->ebx);
+}
+
+void SYSCALL_read(Registers* regs)
+{
+    int64_t size = regs->edx;
+    size = (size << 32) | regs->ecx;
+
+    size = VFS_read(regs->ebx, (void*)regs->edi, size);
+
+    // edx:ecx
+    regs->ecx = size;
+    regs->edx = size >> 32;
+}
+
+void SYSCALL_write(Registers* regs)
+{
+    int64_t size = regs->edx;
+    size = (size << 32) | regs->ecx;
+
+    size = VFS_write(regs->ebx, (void*)regs->esi, size);
+
+    // edx:ecx
+    regs->ecx = size;
+    regs->edx = size >> 32;
+}
+
+void SYSCALL_close(Registers* regs)
+{
+    regs->edx = VFS_close(regs->ebx);
 }
 
 SyscallHandler Handlers[] = {
@@ -119,8 +148,11 @@ SyscallHandler Handlers[] = {
     [8]     = SYSCALL_shm_create,
     [9]     = SYSCALL_shm_attach,
     [10]    = SYSCALL_shm_detach,
-    [11]    = SYSCALL_puts,
-    [12]    = SYSCALL_getId,
+    [11]    = SYSCALL_getId,
+    [12]    = SYSCALL_open,
+    [13]    = SYSCALL_read,
+    [14]    = SYSCALL_write,
+    [15]    = SYSCALL_close,
 };
 
 void SYSCALL_handler(Registers* regs)

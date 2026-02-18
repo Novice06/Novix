@@ -97,7 +97,7 @@ static treenode_t* ramfs_create_node(treenode_t *parent, const char *name, nodet
     return new_node;
 }
 
-static size_t ramfs_write(treenode_t *file, const uint8_t *data, uint64_t size, uint64_t offset)
+static int64_t ramfs_write(treenode_t *file, const uint8_t *data, uint64_t size, uint64_t offset)
 {
     if (!file || file->meta.type != NODE_FILE)
         return VFS_ENOENT;
@@ -127,7 +127,7 @@ static size_t ramfs_write(treenode_t *file, const uint8_t *data, uint64_t size, 
     return size;
 }
 
-static size_t ramfs_read(treenode_t *file, uint8_t *buffer, uint64_t size, uint64_t offset)
+static int64_t ramfs_read(treenode_t *file, uint8_t *buffer, uint64_t size, uint64_t offset)
 {
     if (!file || file->meta.type != NODE_FILE || !buffer)
         return VFS_ENOENT;
@@ -160,9 +160,9 @@ int ramfs_mount(vfs_t* mountpoint);
 int ramfs_unmount(vfs_t* mountpoint);
 int ramfs_get_root(vfs_t* mountpoint, vnode_t** result);
 
-int read(vnode_t* node, void *buffer, size_t size, uint32_t offset);
-int write(vnode_t* node, const void *buffer, size_t size, uint32_t offset);
-int lookup(vnode_t* node, const char* name, struct vnode** result);
+static int64_t read(vnode_t* node, void *buffer, size_t size, uint32_t offset);
+static int64_t write(vnode_t* node, const void *buffer, size_t size, uint32_t offset);
+static int lookup(vnode_t* node, const char* name, struct vnode** result);
 
 filesystem_t ramfs_op = {
     // fs_name will be filled later
@@ -342,14 +342,14 @@ int lookup(vnode_t* node_dir, const char* name, struct vnode** result)
         return VFS_OK;
 }
 
-int read(vnode_t* node, void *buffer, size_t size, uint32_t offset)
+int64_t read(vnode_t* node, void *buffer, size_t size, uint32_t offset)
 {
     treenode_t* file_node = (treenode_t*)node->vnode_data;
 
     return ramfs_read(file_node, buffer, size, offset);
 }
 
-int write(vnode_t* node, const void *buffer, size_t size, uint32_t offset)
+int64_t write(vnode_t* node, const void *buffer, size_t size, uint32_t offset)
 {
     treenode_t* file_node = (treenode_t*)node->vnode_data;
 

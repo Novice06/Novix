@@ -27,6 +27,7 @@
 #include <multitasking/scheduler.h>
 
 #include "ramfs/ramfs.h"
+#include "devfs/devfs.h"
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
@@ -120,6 +121,7 @@ void VFS_init()
 		registered_fs[i] = NULL;
 
 	ramfs_init();
+	devfs_init();
 }
 
 vnode_t* lookup_path_name(const char* path)
