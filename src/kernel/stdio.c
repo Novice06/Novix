@@ -182,12 +182,16 @@ void vfprintf(fd_t file, const char* fmt, va_list args)
                     case 'u':   radix = 10; sign = false; number = true;
                                 break;
 
-                    case 'X':
+                    case 'X':radix = 8; sign = false; number = true;
+                                break;
                     case 'x':
                     case 'p':   radix = 16; sign = false; number = true;
                                 break;
 
                     case 'o':   radix = 8; sign = false; number = true;
+                                break;
+
+                    case 'b':   radix = 2; sign = false; number = true;
                                 break;
 
                     // ignore invalid spec

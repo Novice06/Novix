@@ -27,6 +27,7 @@
 #include <multitasking/time.h>
 #include <multitasking/ipc/message.h>
 #include <multitasking/ipc/shared_memory.h>
+#include <drivers/keyboard.h>
 
 typedef void (*SyscallHandler)(Registers* regs);
 
@@ -136,6 +137,11 @@ void SYSCALL_close(Registers* regs)
     regs->edx = VFS_close(regs->ebx);
 }
 
+void SYSCALL_keyeventToAscii(Registers* regs)
+{
+    regs->ebx = KEYBOARD_scanToAscii((void*)regs->esi);
+}
+
 SyscallHandler Handlers[] = {
     [0]     = SYSCALL_terminate,
     [1]     = SYSCALL_yield,
@@ -153,6 +159,7 @@ SyscallHandler Handlers[] = {
     [13]    = SYSCALL_read,
     [14]    = SYSCALL_write,
     [15]    = SYSCALL_close,
+    [16]    = SYSCALL_keyeventToAscii,
 };
 
 void SYSCALL_handler(Registers* regs)
