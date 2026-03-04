@@ -40,8 +40,8 @@ filesystem_t devfs_op = {
     .VFS_unmount = devfs_unmount,
 };
 
-static int64_t read(struct vnode* node, void *buffer, size_t size, uint32_t offset);
-static int64_t write(struct vnode* node, const void *buffer, size_t size, uint32_t offset);
+static int64_t read(struct vnode* node, void *buffer, size_t size, uint32_t offset, uint32_t flags);
+static int64_t write(struct vnode* node, const void *buffer, size_t size, uint32_t offset, uint32_t flags);
 static int lookup(struct vnode* node_dir, const char* name, struct vnode** result);
 
 // vnode operation !!
@@ -130,18 +130,18 @@ static vnode_t* create_vnode(vfs_t* mountpoint, device_t* dev)
     return NULL;    // cannot create vnode
 }
 
-int64_t read(struct vnode* node, void *buffer, size_t size, uint32_t offset)
+int64_t read(struct vnode* node, void *buffer, size_t size, uint32_t offset, uint32_t flags)
 {
     device_t* dev = (device_t*)node->vnode_data;
 
-    return dev->read(buffer, offset, size, dev->priv);
+    return dev->read(buffer, offset, size, dev->priv, flags);
 }
 
-int64_t write(struct vnode* node, const void *buffer, size_t size, uint32_t offset)
+int64_t write(struct vnode* node, const void *buffer, size_t size, uint32_t offset, uint32_t flags)
 {
     device_t* dev = (device_t*)node->vnode_data;
 
-    return dev->write(buffer, offset, size, dev->priv);
+    return dev->write(buffer, offset, size, dev->priv, flags);
 }
 
 int lookup(struct vnode* node_dir, const char* name, struct vnode** result)

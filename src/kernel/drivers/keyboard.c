@@ -26,6 +26,7 @@
 #include <hal/io.h>
 #include <mem_manager/heap.h>
 #include <multitasking/lock.h>
+#include <multitasking/scheduler.h>
 #include <drivers/keyboard.h>
 #include <drivers/device.h>
 
@@ -92,9 +93,13 @@ bool g_capsLockOn = false;
 bool g_numLockOn = false;
 bool g_scrollOn = false;
 bool g_extended = false;
+
 key_event_t this_keyboard[MAX_KEYBOARD_BUFFER];
 uint8_t buffer_count;
 mutex_t* keyboard_lock;
+
+process_t* first_waiting_kbd;
+process_t* last_waiting_kbd;
 
 static char asciiTable[128] = {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
@@ -282,6 +287,13 @@ void KEYBOARD_interruptHandler(Registers* regs)
     // register the scancode and get rid of bit 7 if necessary
     this_keyboard[buffer_count++] = (key_event_t){(is_pressed ? scancode : scancode & 0x7F), status}; // dont worry it's circular buffer so when count exceed 256 it will reset at 0
 
+    if(first_waiting_kbd)
+    {
+        process_t* released = first_waiting_kbd;
+        first_waiting_kbd = first_waiting_kbd->next;
+        unblock_task(released, false);
+    }
+
     release_mutex(keyboard_lock);
 
 End:
@@ -304,8 +316,8 @@ void KEYBOARD_enable()
     g_keyboard_stateDisabled = false;
 }
 
-static int64_t read(uint8_t* buffer, uint32_t offset , size_t len, void* dev);
-static int64_t write(const uint8_t *buffer, uint32_t offset, size_t len, void* dev);
+static int64_t read(uint8_t* buffer, uint32_t offset , size_t len, void* dev, uint32_t flags);
+static int64_t write(const uint8_t *buffer, uint32_t offset, size_t len, void* dev, uint32_t flags);
 
 void KEYBOARD_initialize()
 {
@@ -320,6 +332,9 @@ void KEYBOARD_initialize()
 
     // KEYBOARD_updateScanCodeSet(SCANCODE_SET_2); // apparently the 8082 chip translates automatically to scancode set 1
     KEYBOARD_setTypematicMode(TYPEMATIC_DELAY_1000, TYPEMATIC_RATE_2PER_SEC);
+
+    first_waiting_kbd = NULL;
+    last_waiting_kbd = NULL;
 
     buffer_count = 0;
     memset(this_keyboard, 0, MAX_KEYBOARD_BUFFER);
@@ -351,31 +366,65 @@ char KEYBOARD_scanToAscii(key_event_t* key)
         return asciiTable[key->code];
 }
 
-int64_t read(uint8_t* buffer, uint32_t offset , size_t len, void* dev)
+int64_t read(uint8_t* buffer, uint32_t offset , size_t len, void* dev, uint32_t flags)
 {
     size_t toread = len;
-    
-    acquire_mutex(keyboard_lock);
+    bool isFulfilled = false;
 
-    if(toread > buffer_count)
-        toread = buffer_count;
-
-    memcpy(buffer, this_keyboard, sizeof(key_event_t) * toread);
-
-    if(toread)
+    do
     {
-        for(int i = 0; i < toread && i < MAX_KEYBOARD_BUFFER - 1; i++)
-            this_keyboard[i] = this_keyboard[i+1];
-    }
+        acquire_mutex(keyboard_lock);
 
-    buffer_count -= toread;
+        if(buffer_count <= 0)
+        {
+            release_mutex(keyboard_lock);
 
-    release_mutex(keyboard_lock);
+            if(flags & VFS_O_NONBLOCK)
+                return VFS_EAGAIN;
+
+            lock_scheduler();
+            if(first_waiting_kbd == NULL)
+            {
+                first_waiting_kbd = PROCESS_getCurrent();
+                last_waiting_kbd = first_waiting_kbd;
+            }
+            else{
+                last_waiting_kbd->next = PROCESS_getCurrent();
+                last_waiting_kbd = last_waiting_kbd->next;
+            }
+
+            last_waiting_kbd->next = NULL;
+            last_waiting_kbd->state = WAITING;
+            unlock_scheduler();
+
+            block_task();
+
+            continue;
+        }
+
+        if(toread > buffer_count)
+            toread = buffer_count;
+
+        memcpy(buffer, this_keyboard, sizeof(key_event_t) * toread);
+
+        if(toread)
+        {
+            for(int i = 0; i < toread && i < MAX_KEYBOARD_BUFFER - 1; i++)
+                this_keyboard[i] = this_keyboard[i+1];
+        }
+
+        buffer_count -= toread;
+        isFulfilled = true;
+
+        release_mutex(keyboard_lock);
+
+    }while (!isFulfilled);
+    
 
     return toread;
 }
 
-int64_t write(const uint8_t *buffer, uint32_t offset, size_t len, void* dev)
+int64_t write(const uint8_t *buffer, uint32_t offset, size_t len, void* dev, uint32_t flags)
 {
     // write to keyboard ?
 }

@@ -285,10 +285,10 @@ int64_t VFS_read(int fd, void *buffer, size_t size)
 	if(!is_fd_valid(fd))
 		return VFS_EBADF;
 
-	if(PROCESS_getCurrent()->resources[fd].mode != VFS_O_RDONLY && PROCESS_getCurrent()->resources[fd].mode != VFS_O_RDWR)
+	if(!(PROCESS_getCurrent()->resources[fd].mode & VFS_O_RDONLY) && !(PROCESS_getCurrent()->resources[fd].mode & VFS_O_RDWR))
 		return VFS_EACCESS;
 
-	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->read(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position);
+	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->read(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position, PROCESS_getCurrent()->resources[fd].mode & 0xFFFFFFF8);
 
 	if(ret < 0)	// it's an error
 		return ret;
@@ -319,10 +319,10 @@ int64_t VFS_write(int fd, const void *buffer, size_t size)
 	if(!is_fd_valid(fd))
 		return VFS_EBADF;
 
-	if(PROCESS_getCurrent()->resources[fd].mode != VFS_O_WRONLY && PROCESS_getCurrent()->resources[fd].mode != VFS_O_RDWR)
+	if(!(PROCESS_getCurrent()->resources[fd].mode & VFS_O_WRONLY) && !(PROCESS_getCurrent()->resources[fd].mode & VFS_O_RDWR))
 		return VFS_EACCESS;
 
-	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->write(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position);
+	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->write(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position, PROCESS_getCurrent()->resources[fd].mode & 0x7);
 	
 	if(ret < 0)	// it's an error
 		return ret;

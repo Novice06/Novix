@@ -31,9 +31,10 @@
 
 typedef enum
 {
-    VFS_O_RDONLY = 0x0001,   // read only
-    VFS_O_WRONLY = 0x0002,   // write only
-    VFS_O_RDWR   = 0x0003,   // read / write
+    VFS_O_RDONLY    = 1 << 0,   // read only
+    VFS_O_WRONLY    = 1 << 1,   // write only
+    VFS_O_RDWR      = 1 << 2,   // read / write
+    VFS_O_NONBLOCK  = 1 << 3,   // non block operation 
 } vfs_open_mode_t;
 
 typedef enum
@@ -46,7 +47,8 @@ typedef enum
     VFS_EISDIR     = -9,    /* Is a directory */
     VFS_ENOTDIR    = -10,   /* Not a directory */
     VFS_ENFILE     = -11,   /* Too many open files */
-    VFS_EBADF      = -12    /* Invalid file descriptor */
+    VFS_EBADF      = -12,   /* Invalid file descriptor */
+    VFS_EAGAIN     = -13,   /* he operation cannot be completed right now Try again */
 } vfs_error_t;
 
 
@@ -116,8 +118,8 @@ typedef struct vnode
  */
 typedef struct vnodeops
 {
-    int64_t (*read)(struct vnode* node, void *buffer, size_t size, uint32_t offset);
-    int64_t (*write)(struct vnode* node, const void *buffer, size_t size, uint32_t offset);
+    int64_t (*read)(struct vnode* node, void *buffer, size_t size, uint32_t offset, uint32_t flags);
+    int64_t (*write)(struct vnode* node, const void *buffer, size_t size, uint32_t offset, uint32_t flags);
 
     /* Find a file/directory by name */
     int (*lookup)(struct vnode* node_dir, const char* name, struct vnode** result);

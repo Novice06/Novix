@@ -160,8 +160,8 @@ int ramfs_mount(vfs_t* mountpoint);
 int ramfs_unmount(vfs_t* mountpoint);
 int ramfs_get_root(vfs_t* mountpoint, vnode_t** result);
 
-static int64_t read(vnode_t* node, void *buffer, size_t size, uint32_t offset);
-static int64_t write(vnode_t* node, const void *buffer, size_t size, uint32_t offset);
+static int64_t read(vnode_t* node, void *buffer, size_t size, uint32_t offset, uint32_t flags);
+static int64_t write(vnode_t* node, const void *buffer, size_t size, uint32_t offset, uint32_t flags);
 static int lookup(vnode_t* node, const char* name, struct vnode** result);
 
 filesystem_t ramfs_op = {
@@ -342,14 +342,14 @@ int lookup(vnode_t* node_dir, const char* name, struct vnode** result)
         return VFS_OK;
 }
 
-int64_t read(vnode_t* node, void *buffer, size_t size, uint32_t offset)
+int64_t read(vnode_t* node, void *buffer, size_t size, uint32_t offset, uint32_t flags)
 {
     treenode_t* file_node = (treenode_t*)node->vnode_data;
 
     return ramfs_read(file_node, buffer, size, offset);
 }
 
-int64_t write(vnode_t* node, const void *buffer, size_t size, uint32_t offset)
+int64_t write(vnode_t* node, const void *buffer, size_t size, uint32_t offset, uint32_t flags)
 {
     treenode_t* file_node = (treenode_t*)node->vnode_data;
 
