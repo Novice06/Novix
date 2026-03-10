@@ -22,6 +22,7 @@
 #include <hal/idt.h>
 #include <hal/isr.h>
 #include <hal/irq.h>
+#include <hal/fpu.h>
 
 //============================================================================
 //    INTERFACE FUNCTIONS
@@ -33,4 +34,5 @@ void HAL_initialize()
     IDT_initialize();
     ISR_initialize();
     IRQ_initialize();
+    FPU_enable();
 }
