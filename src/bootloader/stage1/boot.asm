@@ -16,317 +16,323 @@
 ; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-org 0x7c00
+org 0x7C00
 bits 16
 
-jmp short main
+
+%define ENDL 0x0D, 0x0A
+
+jmp short start
 nop
 
-;*********************************************
-;    BIOS Parameter Block (BPB) for FAT12
-;*********************************************
+times 90 db 0	; filesystem data here (e.g fat 12/16/32)
 
-bpb_oem:					db 'MSWIN4.1'
-bpb_bytes_per_sector:		dw 512
-bpb_sectors_per_cluster:	db 1
-bpb_reserved_sectors:		dw 1
-bpb_fat_count:				db 2
-bpb_dir_entries_count:		dw 0xe0
-bpb_total_sectors:			dw 2880
-bpb_media_descriptor_type:	db 0xf0
-bpb_sectors_per_fat:		dw 9
-bpb_sectors_per_track:		dw 18
-bpb_heads:					dw 2
-bpb_hidden_sectors:			dd 0
-bpb_large_sector_count:		dd 0
+;
+; Code goes here
+;
 
-ebr_drive_number:			db 0
-							db 0
-ebr_signature:				db 0x29
-ebr_volume_id:				db 0x12, 0x34, 0x56, 0x78
-ebr_volume_label:			db "NOVIX      "
-ebr_system_id:				db "FAT12   "
+start:
+    ; setup data segments
+    mov ax, 0           ; can't set ds/es directly
+    mov ds, ax
+    mov es, ax
+    
+    ; setup stack
+    mov ss, ax
+    mov sp, 0x7C00              ; stack grows downwards from where we are loaded in memory
 
-main:
-	xor ax, ax
-	mov ds, ax
-	mov es, ax
-
-	mov ss, ax
-	mov ax, 0x7c00
-	mov sp, ax
-
-	; some BIOSes might start us at 07C0:0000 instead of 0000:7C00, make sure we are in the
+    ; some BIOSes might start us at 07C0:0000 instead of 0000:7C00, make sure we are in the
     ; expected location
     push es
-    push word .codeseg
-    retf ; you can also do a far jump
+    push word .after
+    retf
 
-.codeseg:
+.after:
 
-	; read something from floppy disk
+    ; read something from floppy disk
     ; BIOS should set DL to drive number
-	mov [ebr_drive_number], dl
+    mov [drive_number], dl
 
-	mov si, loading
-	call print
+    ; show loading message
+    mov si, msg_loading
+    call puts
 
+    ; check extensions present
+    mov ah, 0x41
+    mov bx, 0x55AA
+    stc
+    int 13h
+
+    jc .no_disk_extensions
+    cmp bx, 0xAA55
+    jne .no_disk_extensions
+
+    ; extensions are present
+    mov byte [have_extensions], 1
+    jmp .after_disk_extensions_check
+
+.no_disk_extensions:
+    mov byte [have_extensions], 0
+
+.after_disk_extensions_check:
 	; read drive parameters (sectors per track and head count),
     ; instead of relying on data on formatted disk
+	pusha
     push es
+	mov di, 0
+	mov es, di
+	mov dl, [drive_number]
     mov ah, 08h
     int 13h
-    jc disk_read.failDiskRead
+    jc disk_error
     pop es
 
 	and cl, 0x3F                        ; remove top 2 bits
     xor ch, ch
-    mov [bpb_sectors_per_track], cx     ; sector count
+    mov [sectors_per_track], cx     ; sector count
 
     inc dh
-    mov [bpb_heads], dh                 ; head count
-
-	; compute LBA of root directory = reserved + fats * sectors_per_fat
-    ; note: this section can be hardcoded
-    mov ax, [bpb_sectors_per_fat]
-    mov bl, [bpb_fat_count]
-    xor bh, bh
-    mul bx                              ; ax = (fats * sectors_per_fat)
-    add ax, [bpb_reserved_sectors]      ; ax = LBA of root directory
-    push ax
-
-    ; compute size of root directory = (32 * number_of_entries) / bytes_per_sector
-    mov ax, [bpb_dir_entries_count]
-    shl ax, 5                           ; ax *= 32
-    xor dx, dx                          ; dx = 0
-    div word [bpb_bytes_per_sector]     ; number of sectors we need to read
-
-    test dx, dx                         ; if dx != 0, add 1
-    jz .loadFat
-    inc ax                              ; division remainder != 0, add 1
-                                        ; this means we have a sector only partially filled with entries
-
-;
-;loading the root dir table
-;
-.loadFat:
-	
-	mov bx, ax
-	pop ax
-	mov di, ROOTDIR_AND_FAT_OFFSET
-	mov dl, [ebr_drive_number]
-	call disk_read
-
-;
-;searching for the file in the root table
-;
-	mov si, file_name
-	xor bx, bx ; init the counter for .search_file
-.search_file:
-	push si
-	push di
-	
-	mov cx, 11 ; file name length for fat12 (counter loop for repe)
-	repe cmpsb
-
-	pop di
-	pop si
-
-	je .file_found
-
-	add di, 32 ; next dir entry
-	inc bx
-	cmp bx, [bpb_dir_entries_count]
-	jl .search_file
-
-	jmp .file_not_found
-
-.file_not_found:
-	mov si, msg_file_not_found
-	call print
-	jmp halt
-
-.file_found:
-	mov cx, [di+26] ; first logical cluster filled
-	mov [file_cluster], cx
-
-;
-;loading the fat table
-;
-	mov ax, [bpb_reserved_sectors]
-	mov bx, [bpb_sectors_per_fat]
-	mov di, ROOTDIR_AND_FAT_OFFSET		; we just override the root dir table
-	mov dl, [ebr_drive_number]
-	call disk_read
-
-	mov ax, BOOT0_SEGMENT
-	mov es, ax 		; the file segment here
-	mov di, BOOT0_OFFSET 		; the file offset here
-
-.file_cluster_loop:
-	mov ax, [file_cluster]
-	add ax, 31
-	mov bx, [bpb_sectors_per_cluster]
-	call disk_read
-	add di, [bpb_bytes_per_sector]		;adding the size of the read data to avoid overwriting existing data
-
-	
-	mov ax, [file_cluster]
-	mov cx, 3
-	mul cx
-	mov cx, 2
-	div cx
-
-	mov si, ROOTDIR_AND_FAT_OFFSET
-	add si, ax
-	lodsw
-
-	or dx, dx
-	jz .even
-
-.odd:
-	shr ax, 4
-	jmp .nextClusterTest
-.even:
-	and ax, 0x0fff
-
-.nextClusterTest:
-	cmp ax, 0x0ff8
-	jae .end_load_file
-
-	mov [file_cluster], ax
-	jmp .file_cluster_loop
-
-.end_load_file:
-	mov dl, [ebr_drive_number]			; boot device in dl
-
-	mov ax, BOOT0_SEGMENT
-	mov ds, ax 							; setting up the data segment of the kernel
-	jmp BOOT0_SEGMENT:BOOT0_OFFSET 				;jump to the kernel
-
-halt:
-	jmp halt
-;=========================================
-;read a given number of sector on the disk
-;input: 
-;	- LBA index in ax
-;	- number of sector to read in bx
-;	- memory segment in es
-;	- memory offset in di
-;output: es:di
-;=========================================
-disk_read:
-	push ax
-	push bx
-	push cx
-	push dx
-	push si
-	push di
-
-	call lba2chs
-
-	mov al, bl
-	mov dl, 0x0
-	mov bx, di
-	mov di, 3 ;counter
-
-.retry_disk:
-	stc
-	mov ah, 0x2
-	int 0x13
-
-	jnc done_read
-	call disk_reset
-
-	dec di
-	or di, di
-	jnz .retry_disk
-
-.failDiskRead:
-	mov si, read_failure
-	call print
-	hlt
-	jmp halt
-
-done_read:
-	pop di
-	pop si
-	pop dx
-	pop cx
-	pop bx
-	pop ax
-	ret
-
-disk_reset:
-	pusha
-
-	mov ah, 0x0
-	stc
-	int 13h
-	jc disk_read.failDiskRead
-
+    mov [heads], dh                 ; head count
 	popa
-	ret
 
-;=========================================
-;convert a logical block address to 
-;cylinder head sector address
-;input: 
-;	- LBA index in ax
-;output:
-;	- cx [bits 0-5]: sector number
-;	- cx [bits 6-15]: cylinder
-;	- dh: head 
-;=========================================
-lba2chs:
-	push ax
+    ; load stage2
+    mov si, stage2_location
 
-	xor dx, dx
-	div word [bpb_sectors_per_track]
-	inc dx
-	mov cl, dl ;sector
+    mov ax, STAGE2_LOAD_SEGMENT         ; set segment registers
+    mov es, ax
 
-	xor dx, dx
-	div word [bpb_heads]
-	mov ch, al
-	shl ah, 6
-	or cl, ah ;cylinder
+    mov bx, STAGE2_LOAD_OFFSET
 
-	shl dx, 8 ;in dh: head
+.loop:
+    mov eax, [si]
+    add si, 4
+    mov cl, [si]
+    inc si
 
-	pop ax
-	ret
+    cmp eax, 0
+    je .read_finish
 
+    call disk_read
 
-print:
-	push ax
-	push bx
-	push si
-	xor ax, ax
-	mov ah, 0xe
+    xor ch, ch
+    shl cx, 5
+    mov di, es
+    add di, cx
+    mov es, di
 
-print_loop:
-	lodsb ;load a single byte from si to al
-	or al, al
-	jz done_print
-	xor bx, bx
-	int 0x10
-	jmp print_loop
+    jmp .loop
 
-done_print:
-	pop si
-	pop bx
-	pop ax
-	ret
+.read_finish:
+    
+    ; jump to our kernel
+    mov dl, [drive_number]          ; boot device in dl
+
+    mov ax, STAGE2_LOAD_SEGMENT         ; set segment registers
+    mov ds, ax
+    mov es, ax
+
+    jmp STAGE2_LOAD_SEGMENT:STAGE2_LOAD_OFFSET
+
+    jmp wait_key_and_reboot             ; should never happen
+
+    cli                                 ; disable interrupts, this way CPU can't get out of "halt" state
+    hlt
 
 
-loading db "Loading...",13, 10, 0
-read_failure DB "failed to read disk !", 13, 10, 0
-file_name DB "BOOT0   BIN"
-file_cluster DW 0
-msg_file_not_found DB "the file boot0.bin doesn't exist !", 13, 10, 0
-ROOTDIR_AND_FAT_OFFSET EQU 0xc000
-BOOT0_SEGMENT EQU 0x0
-BOOT0_OFFSET EQU 0x500
-times 510-($-$$) db 0x90
-dw 0xaa55
+;
+; Error handlers
+;
+
+disk_error:
+    mov si, msg_read_failed
+    call puts
+    jmp wait_key_and_reboot
+
+wait_key_and_reboot:
+    mov ah, 0
+    int 16h                     ; wait for keypress
+    jmp 0FFFFh:0                ; jump to beginning of BIOS, should reboot
+
+.halt:
+    cli                         ; disable interrupts, this way CPU can't get out of "halt" state
+    hlt
+
+
+;
+; Prints a string to the screen
+; Params:
+;   - ds:si points to string
+;
+puts:
+    ; save registers we will modify
+    push si
+    push ax
+    push bx
+
+.loop:
+    lodsb               ; loads next character in al
+    or al, al           ; verify if next character is null?
+    jz .done
+
+    mov ah, 0x0E        ; call bios interrupt
+    mov bh, 0           ; set page number to 0
+    int 0x10
+
+    jmp .loop
+
+.done:
+    pop bx
+    pop ax
+    pop si    
+    ret
+
+;
+; Disk routines
+;
+
+;
+; Converts an LBA address to a CHS address
+; Parameters:
+;   - ax: LBA address
+; Returns:
+;   - cx [bits 0-5]: sector number
+;   - cx [bits 6-15]: cylinder
+;   - dh: head
+;
+
+lba_to_chs:
+
+    push ax
+    push dx
+
+    xor dx, dx                          ; dx = 0
+    div word [sectors_per_track]    ; ax = LBA / SectorsPerTrack
+                                        ; dx = LBA % SectorsPerTrack
+
+    inc dx                              ; dx = (LBA % SectorsPerTrack + 1) = sector
+    mov cx, dx                          ; cx = sector
+
+    xor dx, dx                          ; dx = 0
+    div word [heads]                ; ax = (LBA / SectorsPerTrack) / Heads = cylinder
+                                        ; dx = (LBA / SectorsPerTrack) % Heads = head
+    mov dh, dl                          ; dh = head
+    mov ch, al                          ; ch = cylinder (lower 8 bits)
+    shl ah, 6
+    or cl, ah                           ; put upper 2 bits of cylinder in CL
+
+    pop ax
+    mov dl, al                          ; restore DL
+    pop ax
+    ret
+
+
+;
+; Reads sectors from a disk
+; Parameters:
+;   - eax: LBA address
+;   - cl: number of sectors to read (up to 128)
+;   - dl: drive number
+;   - es:bx: memory address where to store read data
+;
+disk_read:
+
+    push eax                            ; save registers we will modify
+    push bx
+    push cx
+    push dx
+    push si
+    push di
+
+    cmp byte [have_extensions], 1
+    jne .no_disk_extensions
+
+    ; with extensions
+    mov [extensions_dap.lba], eax
+    mov [extensions_dap.segment], es
+    mov [extensions_dap.offset], bx
+    mov [extensions_dap.count], cl
+
+    mov ah, 0x42
+    mov si, extensions_dap
+    mov di, 3                           ; retry count
+    jmp .retry
+
+.no_disk_extensions:
+    push cx                             ; temporarily save CL (number of sectors to read)
+    call lba_to_chs                     ; compute CHS
+    pop ax                              ; AL = number of sectors to read
+    
+    mov ah, 02h
+    mov di, 3                           ; retry count
+
+.retry:
+    pusha                               ; save all registers, we don't know what bios modifies
+    stc                                 ; set carry flag, some BIOS'es don't set it
+    int 13h                             ; carry flag cleared = success
+    jnc .done                           ; jump if carry not set
+
+    ; read failed
+    popa
+    call disk_reset
+
+    dec di
+    test di, di
+    jnz .retry
+
+.fail:
+    ; all attempts are exhausted
+    jmp disk_error
+
+.done:
+    popa
+
+    pop di
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop eax                            ; restore registers modified
+    ret
+
+
+;
+; Resets disk controller
+; Parameters:
+;   dl: drive number
+;
+disk_reset:
+    pusha
+    mov ah, 0
+    stc
+    int 13h
+    jc disk_error
+    popa
+    ret
+
+; disk geometry
+sectors_per_track:      dw 18
+heads:                  dw 2
+drive_number:           db 0
+
+msg_loading:            db 'Loading...', ENDL, 0
+msg_read_failed:        db 'Read from disk failed!', ENDL, 0
+
+have_extensions:        db 0
+extensions_dap:
+    .size:              db 10h
+                        db 0
+    .count:             dw 0
+    .offset:            dw 0
+    .segment:           dw 0
+    .lba:               dq 0
+
+
+
+STAGE2_LOAD_SEGMENT     equ 0x0
+STAGE2_LOAD_OFFSET      equ 0x500
+
+times 510-30-($-$$) db 0
+
+stage2_location:        times 30 db 0
+
+dw 0AA55h

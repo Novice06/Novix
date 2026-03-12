@@ -32,6 +32,8 @@ typedef void __attribute__((cdecl)) (*KernelStart)(Boot_info* info);
 
 Boot_info* g_info = MEMORY_BOOTINFO_ADDR;
 
+char* buff[512];
+
 void __attribute__((cdecl)) start(uint16_t bootDrive)
 {
     clr();
@@ -42,6 +44,15 @@ void __attribute__((cdecl)) start(uint16_t bootDrive)
         printf("Disk init error\r\n");
         goto end;
     }
+
+    if(!DISK_ReadSectors(&disk, 0, 1, buff))
+    {
+        printf("Ohh boy we failed!!");
+        goto end;
+    }
+
+    fprint_buffer("1st sector: ", buff, 512);
+    goto end;
 
     if (!FAT_Initialize(&disk))
     {

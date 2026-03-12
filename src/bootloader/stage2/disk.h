@@ -27,6 +27,7 @@ typedef struct {
     uint16_t cylinders;
     uint16_t sectors;
     uint16_t heads;
+    bool is_extended;
 } DISK;
 
 bool DISK_Initialize(DISK* disk, uint8_t driveNumber);

@@ -30,6 +30,7 @@
 void puts(const char* s);
 void putc(const char s);
 void printf(const char* fmt, ...);
+void fprint_buffer(const char* msg, const void* buffer, uint32_t count);
 void scrollUp();
 void newLine();
 void clr();

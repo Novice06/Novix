@@ -1,1 +1,1 @@
-qemu-system-i386 -debugcon stdio -m 64M -fda build/main.img
+qemu-system-i386 -hda build/main.img

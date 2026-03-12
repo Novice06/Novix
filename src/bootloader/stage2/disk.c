@@ -26,10 +26,13 @@ bool DISK_Initialize(DISK* disk, uint8_t driveNumber)
     uint8_t driveType;
     uint16_t cylinders, sectors, heads;
 
+    disk->id = driveNumber;
+
     if (!x86_Disk_GetDriveParams(disk->id, &driveType, &cylinders, &sectors, &heads))
         return false;
 
-    disk->id = driveNumber;
+    disk->is_extended = x86_Disk_CheckExtensions(disk->id);
+
     disk->cylinders = cylinders;
     disk->heads = heads;
     disk->sectors = sectors;
@@ -57,8 +60,18 @@ bool DISK_ReadSectors(DISK* disk, uint32_t lba, uint8_t sectors, void* dataOut)
 
     for (int i = 0; i < 3; i++)
     {
-        if (x86_Disk_Read(disk->id, cylinder, sector, head, sectors, dataOut))
-            return true;
+        if(disk->is_extended)
+        {
+            printf("we READING extended shit\n\n");
+            if (x86_Disk_ExtendedRead(disk->id, sectors, lba, dataOut))
+                return true;
+        }
+        else 
+        {
+            if (x86_Disk_Read(disk->id, cylinder, sector, head, sectors, dataOut))
+                return true;
+        }
+        
 
         x86_Disk_Reset(disk->id);
     }

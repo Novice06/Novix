@@ -99,6 +99,64 @@ x86_inb:
     in al, dx
     ret
 
+global x86_Disk_CheckExtensions
+x86_Disk_CheckExtensions:
+    [bits 32]
+
+    ; make new call frame
+    push ebp             ; save old call frame
+    mov ebp, esp         ; initialize new call frame
+
+    x86_EnterRealMode
+
+    [bits 16]
+
+    ; save regs
+    push es
+    push bx
+    push esi
+    push di
+
+    mov ah, 0x41
+    mov dl, [bp+8]
+    mov di, 0
+    mov es, di
+    mov bx, 0x55AA
+    stc
+    int 13h
+
+    jc .no_disk_extensions
+    cmp bx, 0xAA55
+    jne .no_disk_extensions
+
+    ; extensions are present
+    mov eax, 1
+    jmp .end
+
+.no_disk_extensions:
+    mov eax, 0
+
+.end
+    ; restore regs
+    pop di
+    pop esi
+    pop bx
+    pop es
+
+    ; return
+
+    push eax
+
+    x86_EnterProtectedMode
+
+    [bits 32]
+
+    pop eax
+
+    ; restore old call frame
+    mov esp, ebp
+    pop ebp
+    ret
 
 global x86_Disk_GetDriveParams
 x86_Disk_GetDriveParams:
@@ -263,6 +321,71 @@ x86_Disk_Read:
     mov esp, ebp
     pop ebp
     ret
+
+global x86_Disk_ExtendedRead
+x86_Disk_ExtendedRead:
+
+    ; make new call frame
+    push ebp             ; save old call frame
+    mov ebp, esp          ; initialize new call frame
+
+    x86_EnterRealMode
+
+    ; save modified regs
+    push ebx
+    push esi
+    push edi
+    push es
+
+    mov eax, [bp+12]    ;count
+    mov [extensions_dap.count], eax
+
+    LinearToSegOffset [bp + 24], es, esi, si
+    mov [extensions_dap.offset], si
+    mov [extensions_dap.segment], es
+
+    mov eax, [bp+16]
+    mov [extensions_dap.lba], eax
+    mov eax, [bp+20]
+    mov [extensions_dap.lba+4], eax
+
+
+    ; call int13h
+    mov ah, 42h
+    mov dl, [bp+8]  ; drive number
+    ; ds is already set
+    mov si, extensions_dap
+    stc
+    int 13h
+
+    ; set return value
+    mov eax, 1
+    sbb eax, 0           ; 1 on success, 0 on fail   
+
+    ; restore regs
+    pop es
+    pop edi
+    pop esi
+    pop ebx
+
+    push eax
+
+    x86_EnterProtectedMode
+
+    pop eax
+
+    ; restore old call frame
+    mov esp, ebp
+    pop ebp
+    ret
+
+extensions_dap:
+    .size:              db 10h
+                        db 0
+    .count:             dw 0
+    .offset:            dw 0
+    .segment:           dw 0
+    .lba:               dq 0
 
 global x86_Get_MemorySize
 x86_Get_MemorySize:
