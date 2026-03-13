@@ -134,6 +134,18 @@ int strncmp(const char *str1, const char *str2, int num)
     return 0;
 }
 
+static char *_tok;
+char *strtok(char *s, const char *delim) {
+    if (s) _tok = s;
+    if (!_tok) return NULL;
+    while (*_tok && strchr(delim, *_tok)) _tok++;
+    if (!*_tok) { _tok = NULL; return NULL; }
+    char *tok = _tok;
+    while (*_tok && !strchr(delim, *_tok)) _tok++;
+    if (*_tok) *_tok++ = '\0'; else _tok = NULL;
+    return tok;
+}
+
 long strtol(char* start, char** end, int base)
 {
     int c, cutlim, outRangeStatus;

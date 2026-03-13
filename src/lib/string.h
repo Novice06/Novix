@@ -27,4 +27,5 @@ char* strncpy(char* dst, const char* src, int num);
 unsigned strlen(const char* str);
 int strcmp(const char *str1, const char *str2);
 int strncmp(const char *str1, const char *str2, int num);
+char *strtok(char *s, const char *delim);
 long strtol(char* start, char** end, int base);

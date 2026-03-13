@@ -27,8 +27,9 @@ STAGE2_SIZE=$(stat -c%s ${BUILD_DIR}/boot0.bin)
 echo ${STAGE2_SIZE}
 STAGE2_SECTORS=$(( ( ${STAGE2_SIZE} + 511 ) / 512 ))
 echo ${STAGE2_SECTORS}
+echo $(( ${DISK_PART1_BEGIN} - 1 ))
 
-if [ ${STAGE2_SECTORS} \> $(( ${DISK_PART1_BEGIN} - 1 )) ]; then
+if [ ${STAGE2_SECTORS} -gt $(( ${DISK_PART1_BEGIN} - 1 )) ]; then
     echo "Stage2 too big!!!"
     exit 2
 fi
@@ -42,7 +43,7 @@ TARGET_PARTITION="${DEVICE}p1"
 
 # create file system
 echo "Formatting ${TARGET_PARTITION}..."
-mkfs.fat -n "NOVIX" $TARGET_PARTITION >/dev/null
+mkfs.fat -F 32 -n "NOVIX" $TARGET_PARTITION >/dev/null
 
 # install bootloader
 echo "Installing bootloader on ${TARGET_PARTITION}..."

@@ -25,7 +25,7 @@ bits 16
 jmp short start
 nop
 
-times 90 db 0	; filesystem data here (e.g fat 12/16/32)
+times 100 db 0	; filesystem data here (e.g fat 12/16/32)
 
 ;
 ; Code goes here

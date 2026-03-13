@@ -21,6 +21,7 @@
 
 #include "stdio.h"
 #include "x86.h"
+#include "assembly.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -318,7 +319,7 @@ void printf(const char* fmt, ...)
     va_end(args);
 }
 
-void fprint_buffer(const char* msg, const void* buffer, uint32_t count)
+void print_buffer(const char* msg, const void* buffer, uint32_t count)
 {
     const uint8_t* u8Buffer = (const uint8_t*)buffer;
     
@@ -329,4 +330,17 @@ void fprint_buffer(const char* msg, const void* buffer, uint32_t count)
         putc(g_HexChars[u8Buffer[i] & 0xF]);
     }
     puts("\n");
+}
+
+void E9_putc(char c)
+{   
+    outb(0xE9, c);
+}
+
+void debugs(const char* str)
+{
+    while(*str){
+        E9_putc(*str);
+        str++;
+    }
 }

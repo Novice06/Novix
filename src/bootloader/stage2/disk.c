@@ -62,7 +62,6 @@ bool DISK_ReadSectors(DISK* disk, uint32_t lba, uint8_t sectors, void* dataOut)
     {
         if(disk->is_extended)
         {
-            printf("we READING extended shit\n\n");
             if (x86_Disk_ExtendedRead(disk->id, sectors, lba, dataOut))
                 return true;
         }

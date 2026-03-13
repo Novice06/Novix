@@ -9,7 +9,7 @@
 // 0x00020000 - 0x00026000 - FAT driver
 #define MEMORY_FAT_ADDR     ((void*)0x20000)
 #define MEMORY_ROOTDIR_ADDR     ((void*)0x23000)
-#define MEMORY_FATBUFFER_ADDR     ((void*)0x26000)
+#define MEMORY_FATBUFFER_ADDR     ((void*)0x36000)
 
 // 0x00040000 - 0x00040100 - MEMORY information
 #define MEMORY_MAP_ADDR     ((void*)0x40000)
