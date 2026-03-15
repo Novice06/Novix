@@ -15,14 +15,22 @@ export LIBGCC_PATH
 export LIB_DIR
 
 #
-# Floppy image
+# disk image
 #
 
-floppy_image: $(BUILD_DIR)/main.img
+disk_image: $(BUILD_DIR)/main.img
 
 $(BUILD_DIR)/main.img: lib bootloader kernel
 	chmod +x make_disk.sh
 	./make_disk.sh $@ 52428800 $(BUILD_DIR)
+
+#
+# bootable usb
+#
+
+bootable_usb: lib bootloader kernel
+	chmod +x make_bootable_usb.sh
+	./make_bootable_usb.sh $(BUILD_DIR)
 
 #
 # lib
@@ -46,7 +54,7 @@ stage2:
 kernel:
 	$(MAKE) -C $(SRC_DIR)/kernel/ BUILD_DIR=$(abspath $(BUILD_DIR))
 
-run: floppy_image
+run: disk_image
 	chmod +x run.sh
 	./run.sh
 

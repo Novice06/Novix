@@ -16,6 +16,8 @@
 ; along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+extern LoadGDT
+
 %macro x86_EnterRealMode 0
     [bits 32]
     jmp word 18h:.pmode16         ; 1 - jump to 16-bit protected mode segment
@@ -44,6 +46,7 @@
 
 %macro x86_EnterProtectedMode 0
     cli
+    call LoadGDT
 
     ; 4 - set protection enable flag in CR0
     mov eax, cr0
@@ -544,6 +547,164 @@ x86_Get_MemoryMap:
     pop ebx
 
 ; restore old call frame
+    mov esp, ebp
+    pop ebp
+    ret
+
+global x86_VESA_GetInfo
+x86_VESA_GetInfo:
+    [bits 32]
+
+    ; make new call frame
+    push ebp             ; save old call frame
+    mov ebp, esp         ; initialize new call frame
+
+    x86_EnterRealMode
+
+    [bits 16]
+
+    ; save regs
+    push es
+    push bx
+    push di
+
+    mov ax, 4F00h
+    LinearToSegOffset [bp+8], es, edi, di
+    int 10h
+
+    cmp ax, 004fh
+    jne .failed
+
+    mov eax, 1
+    jmp .end
+
+.failed:
+    mov eax, 0
+
+.end:
+    ; restore regs
+    pop di
+    pop bx
+    pop es
+
+    ; return
+
+    push eax
+
+    x86_EnterProtectedMode
+
+    [bits 32]
+
+    pop eax
+
+    ; restore old call frame
+    mov esp, ebp
+    pop ebp
+    ret
+
+global x86_VESA_GetModeInfo
+x86_VESA_GetModeInfo:
+    [bits 32]
+
+    ; make new call frame
+    push ebp             ; save old call frame
+    mov ebp, esp         ; initialize new call frame
+
+    x86_EnterRealMode
+
+    [bits 16]
+
+    ; save regs
+    push es
+    push bx
+    push di
+
+    mov ax, 4F01h
+    mov cx, [bp+12]
+    LinearToSegOffset [bp+8], es, edi, di
+    int 10h
+
+    cmp ax, 004fh
+    jne .failed
+
+    mov eax, 1
+    jmp .end
+
+.failed:
+    mov eax, 0
+
+.end:
+    ; restore regs
+    pop di
+    pop bx
+    pop es
+
+    ; return
+
+    push eax
+
+    x86_EnterProtectedMode
+
+    [bits 32]
+
+    pop eax
+
+    ; restore old call frame
+    mov esp, ebp
+    pop ebp
+    ret
+
+global x86_VESA_SetMode
+x86_VESA_SetMode:
+    [bits 32]
+
+    ; make new call frame
+    push ebp             ; save old call frame
+    mov ebp, esp         ; initialize new call frame
+
+    x86_EnterRealMode
+
+    [bits 16]
+
+    ; save regs
+    push es
+    push bx
+    push edi
+    push ebp
+
+    mov ax, 4F02h
+    mov bx, [bp+8]
+    or bx, 0x4000
+    LinearToSegOffset [bp+12], es, edi, di
+    int 10h
+
+    cmp ax, 004fh
+    jne .failed
+
+    mov eax, 1
+    jmp .end
+
+.failed:
+    mov eax, 0
+
+.end:
+    ; restore regs
+    pop ebp
+    pop edi
+    pop bx
+    pop es
+
+    ; return
+
+    push eax
+
+    x86_EnterProtectedMode
+
+    [bits 32]
+
+    pop eax
+
+    ; restore old call frame
     mov esp, ebp
     pop ebp
     ret

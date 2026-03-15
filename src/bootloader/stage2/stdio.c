@@ -21,7 +21,7 @@
 
 #include "stdio.h"
 #include "x86.h"
-#include "assembly.h"
+#include "x86.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -137,9 +137,25 @@ void putc(const char c){
     updateCursor();
 }
 
+void E9_putc(const char c)
+{   
+    x86_outb(0xE9, c);
+}
+
+void debugs(const char* str)
+{
+    while(*str){
+        E9_putc(*str);
+        str++;
+    }
+}
+
+typedef void (*PutChar)(const char c);
+typedef void (*PutString)(const char* str);
+
 const char g_HexChars[] = "0123456789abcdef";
 
-void printf_unsigned(unsigned long long number, int radix)
+void printf_unsigned(PutChar putchar, unsigned long long number, int radix)
 {
     char buffer[32];
     int pos = 0;
@@ -154,17 +170,17 @@ void printf_unsigned(unsigned long long number, int radix)
 
     // print number in reverse order
     while (--pos >= 0)
-        putc(buffer[pos]);
+        putchar(buffer[pos]);
 }
 
-void printf_signed(long long number, int radix)
+void printf_signed(PutChar putchar, long long number, int radix)
 {
     if (number < 0)
     {
-        putc('-');
-        printf_unsigned(-number, radix);
+        putchar('-');
+        printf_unsigned(putchar, -number, radix);
     }
-    else printf_unsigned(number, radix);
+    else printf_unsigned(putchar, number, radix);
 }
 
 #define PRINTF_STATE_NORMAL         0
@@ -179,11 +195,8 @@ void printf_signed(long long number, int radix)
 #define PRINTF_LENGTH_LONG          3
 #define PRINTF_LENGTH_LONG_LONG     4
 
-void printf(const char* fmt, ...)
+void printf_where(PutChar putchar, PutString putstr, const char* fmt, va_list args)
 {
-    va_list args;
-    va_start(args, fmt);
-
     int state = PRINTF_STATE_NORMAL;
     int length = PRINTF_LENGTH_DEFAULT;
     int radix = 10;
@@ -199,7 +212,7 @@ void printf(const char* fmt, ...)
                 {
                     case '%':   state = PRINTF_STATE_LENGTH;
                                 break;
-                    default:    putc(*fmt);
+                    default:    putchar(*fmt);
                                 break;
                 }
                 break;
@@ -239,14 +252,14 @@ void printf(const char* fmt, ...)
             PRINTF_STATE_SPEC_:
                 switch (*fmt)
                 {
-                    case 'c':   putc((char)va_arg(args, int));
+                    case 'c':   putchar((char)va_arg(args, int));
                                 break;
 
                     case 's':   
-                                puts(va_arg(args, const char*));
+                                putstr(va_arg(args, const char*));
                                 break;
 
-                    case '%':   putc('%');
+                    case '%':   putchar('%');
                                 break;
 
                     case 'd':
@@ -276,13 +289,13 @@ void printf(const char* fmt, ...)
                         {
                         case PRINTF_LENGTH_SHORT_SHORT:
                         case PRINTF_LENGTH_SHORT:
-                        case PRINTF_LENGTH_DEFAULT:     printf_signed(va_arg(args, int), radix);
+                        case PRINTF_LENGTH_DEFAULT:     printf_signed(putchar, va_arg(args, int), radix);
                                                         break;
 
-                        case PRINTF_LENGTH_LONG:        printf_signed(va_arg(args, long), radix);
+                        case PRINTF_LENGTH_LONG:        printf_signed(putchar, va_arg(args, long), radix);
                                                         break;
 
-                        case PRINTF_LENGTH_LONG_LONG:   printf_signed(va_arg(args, long long), radix);
+                        case PRINTF_LENGTH_LONG_LONG:   printf_signed(putchar, va_arg(args, long long), radix);
                                                         break;
                         }
                     }
@@ -292,13 +305,13 @@ void printf(const char* fmt, ...)
                         {
                         case PRINTF_LENGTH_SHORT_SHORT:
                         case PRINTF_LENGTH_SHORT:
-                        case PRINTF_LENGTH_DEFAULT:     printf_unsigned(va_arg(args, unsigned int), radix);
+                        case PRINTF_LENGTH_DEFAULT:     printf_unsigned(putchar, va_arg(args, unsigned int), radix);
                                                         break;
                                                         
-                        case PRINTF_LENGTH_LONG:        printf_unsigned(va_arg(args, unsigned  long), radix);
+                        case PRINTF_LENGTH_LONG:        printf_unsigned(putchar, va_arg(args, unsigned  long), radix);
                                                         break;
 
-                        case PRINTF_LENGTH_LONG_LONG:   printf_unsigned(va_arg(args, unsigned  long long), radix);
+                        case PRINTF_LENGTH_LONG_LONG:   printf_unsigned(putchar, va_arg(args, unsigned  long long), radix);
                                                         break;
                         }
                     }
@@ -315,6 +328,24 @@ void printf(const char* fmt, ...)
 
         fmt++;
     }
+}
+
+void printf(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    printf_where(putc, puts, fmt, args);
+
+    va_end(args);
+}
+
+void debugf(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    printf_where(E9_putc, debugs, fmt, args);
 
     va_end(args);
 }
@@ -330,17 +361,4 @@ void print_buffer(const char* msg, const void* buffer, uint32_t count)
         putc(g_HexChars[u8Buffer[i] & 0xF]);
     }
     puts("\n");
-}
-
-void E9_putc(char c)
-{   
-    outb(0xE9, c);
-}
-
-void debugs(const char* str)
-{
-    while(*str){
-        E9_putc(*str);
-        str++;
-    }
 }

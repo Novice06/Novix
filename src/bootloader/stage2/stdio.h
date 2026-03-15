@@ -38,3 +38,4 @@ void updateCursor();
 void debugs(const char* str);
 void E9_putc(char c);
 void debugs(const char* str);
+void debugf(const char* fmt, ...);

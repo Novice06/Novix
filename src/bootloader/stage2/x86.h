@@ -24,6 +24,8 @@
 #include <stdbool.h>
 #include <boot_info.h>
 
+#include "vbe.h"
+
 void __attribute__((cdecl)) x86_outb(uint16_t port, uint8_t value);
 uint8_t __attribute__((cdecl)) x86_inb(uint16_t port);
 
@@ -48,3 +50,7 @@ bool __attribute__((cdecl)) x86_Disk_ExtendedRead(uint8_t drive, uint32_t count,
 
 uint32_t __attribute__((cdecl)) x86_Get_MemorySize();
 uint32_t __attribute__((cdecl)) x86_Get_MemoryMap(Memory_mapEntry* entries, uint32_t* memoryBlockCount);
+
+bool __attribute__((cdecl)) x86_VESA_GetInfo(VbeInfoBlock_t* buff);
+bool __attribute__((cdecl)) x86_VESA_GetModeInfo(vbe_mode_info_t* buff, uint16_t mode);
+bool __attribute__((cdecl)) x86_VESA_SetMode(uint16_t mode, VbeInfoBlock_t* CtrlBlock);

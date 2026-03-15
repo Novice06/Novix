@@ -26,6 +26,7 @@
 #include "x86.h"
 #include "memdefs.h"
 #include "memdetect.h"
+#include "vbe.h"
 
 void* Kernel_addr = (void*)0x100000;
 typedef void __attribute__((cdecl)) (*KernelStart)(Boot_info* info);
@@ -102,11 +103,13 @@ void __attribute__((cdecl)) start(uint16_t bootDrive)
     memoryDetect(g_info);
     g_info->bootDrive = bootDrive;
 
+    if(!init_graphics(1440, 900, &g_info->video_info)) goto end;
+
     // execute kernel
     KernelStart kernelStart = (KernelStart)Kernel_addr;
     kernelStart(g_info);
 
 end:
-    printf("Unable to load the Kernel !!");
+    debugf("Unable to load the Kernel !!");
     for (;;);
 }
