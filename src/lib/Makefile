@@ -1,17 +1,16 @@
 BUILD_DIR?=build
 
 ASM?=nasm
-ASMFLAGS= -f elf
+ASMFLAGS=-f elf32
 
-LIBGCC_PATH?=/home/novice/cross/i686-elf/lib/gcc/i686-elf/14.2.0
-CC?=/home/novice/cross/i686-elf/bin/i686-elf-gcc
-CFLAG=-ffreestanding -nostdlib -std=c99 -g -I $(abspath $(LIBGCC_PATH))
+# LLVM toolchain
+CC?=clang
+TARGET=i686-elf
 
-LD?=/home/novice/cross/i686-elf/bin/i686-elf-ld
-LDFLAG=-T linker.ld -nostdlib -L $(LIBGCC_PATH)
+CFLAG=--target=$(TARGET) -m32 -ffreestanding -nostdlib -fno-stack-protector -fno-pic -std=c99 -g
 
 SOURCES_C=$(wildcard *.c)
-OBJECTS_C=$(patsubst %.c, $(BUILD_DIR)/lib/c/%.obj, $(SOURCES_C))
+OBJECTS_C=$(patsubst %.c,$(BUILD_DIR)/lib/c/%.obj,$(SOURCES_C))
 
 lib: $(OBJECTS_C)
 

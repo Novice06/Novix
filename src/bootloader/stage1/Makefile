@@ -1,17 +1,17 @@
-BUILD_DIR?=build
+BUILD_DIR ?= build
 
-ASM?=nasm
-ASMFLAGS= -f elf
+ASM ?= nasm
+ASMFLAGS ?= -f bin      # flat binary for stage1
 
-LIBGCC_PATH?=/home/novice/cross/i686-elf/lib/gcc/i686-elf/14.2.0
-CC?=/home/novice/cross/i686-elf/bin/i686-elf-gcc
-CFLAG=-ffreestanding -nostdlib -std=c99 -g -I $(abspath $(LIBGCC_PATH))
+# LLVM toolchain (for later C stages)
+CC ?= clang
+LD ?= ld.lld
+TARGET ?= i686-elf
 
-LD?=/home/novice/cross/i686-elf/bin/i686-elf-ld
-LDFLAG=-T linker.ld -nostdlib -L $(LIBGCC_PATH)
-
+# Stage1 target
 stage1: $(BUILD_DIR)/bootloader.bin
 
 $(BUILD_DIR)/bootloader.bin: boot.asm
-	@$(ASM) boot.asm -f bin -o $(BUILD_DIR)/bootloader.bin
-	@echo "--> Created:  bootloader.bin"
+	@mkdir -p $(@D)
+	@$(ASM) $(ASMFLAGS) boot.asm -o $(BUILD_DIR)/bootloader.bin
+	@echo "--> Created: bootloader.bin"
