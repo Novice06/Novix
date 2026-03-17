@@ -720,12 +720,12 @@ void init_process()
 
     SYSCALL_initialize();
 
-    PROCESS_createFromByteArray(hello_bin, hello_bin_len, true);
+    // PROCESS_createFromByteArray(hello_bin, hello_bin_len, true);
 
     PROCESS_terminate();
 }
 
-void __attribute__((cdecl)) start(Boot_info* info)
+void __attribute__((cdecl)) start(Boot_info* boot_info)
 {
     // calculate the kernel size and memset the bss section
     uint32_t kernel_size = ((uint32_t)(&__end) - 0xc0000000 + 0x100000) - 0x100000;
@@ -736,16 +736,34 @@ void __attribute__((cdecl)) start(Boot_info* info)
     log_info("kernel", "kernel start 0x%x, kernel end 0x%x", &__text_start, &__end);
     log_info("kernel", "kernel size %d Kb", roundUp_div(kernel_size, 1024));
 
-    puts(logo);
+    // somehow after all systems initialize Boot_info* info gets overwritten or smthing so we gonna save what we'll need first !
+    video_info_t vidInfo;
+    memcpy(&vidInfo, &boot_info->video_info, sizeof(video_info_t));
 
     HAL_initialize();
     
-    PHYSMEM_initialize(info, kernel_size);
+    PHYSMEM_initialize(boot_info, kernel_size);
     VIRTMEM_initialize(kernel_size);
     HEAP_initialize();
     VMALLOC_initialize();
 
     List_init(kmalloc, kfree);
+
+    printf("info: 0x%x\n", (vidInfo.height * vidInfo.pitch * vidInfo.bytes_per_pixel));
+
+    for(int i = 0; i < (vidInfo.height * vidInfo.pitch * vidInfo.bytes_per_pixel) / 0x1000; i++)
+        VIRTMEM_mapPageCustom((void*)vidInfo.framebuffer + (i * 0x1000), (void*)0xf0000000 + (i * 0x1000), true);
+
+    uint32_t color = (135 << vidInfo.red_position) | (206 << vidInfo.green_position) | (235 << vidInfo.blue_position);
+    void* framebuffer = (void*)(void*)0xf0000000;
+    for(int y = 0; y < vidInfo.height; y++)
+    {
+        void* row = framebuffer + y * vidInfo.pitch;
+        for(int x = 0; x < vidInfo.width; x++)
+        {
+            memcpy(row + x * vidInfo.bytes_per_pixel, &color, vidInfo.bytes_per_pixel);
+        }
+    }
 
     SCHEDULER_initialize();
     PROCESS_createFrom(init_process);

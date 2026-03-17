@@ -84,7 +84,10 @@ void __attribute__((cdecl)) start(uint16_t bootDrive)
     }
 
     if(!boot_partition)
+    {
+        debugf("no boot partition found!!\n");
         goto end;
+    }
 
     // printf("partition start at: %d, total sectors: %d\n", boot_partition->relative_sector, boot_partition->total_sectors);
     
@@ -110,6 +113,6 @@ void __attribute__((cdecl)) start(uint16_t bootDrive)
     kernelStart(g_info);
 
 end:
-    debugf("Unable to load the Kernel !!");
+    debugf("Unable to load the Kernel !!\n");
     for (;;);
 }
