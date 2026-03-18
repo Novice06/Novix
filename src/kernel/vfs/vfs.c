@@ -332,6 +332,14 @@ int64_t VFS_write(int fd, const void *buffer, size_t size)
 	return ret;
 }
 
+int VFS_ioctl(int fd, int command, void* arg)
+{
+	if(!is_fd_valid(fd))
+		return VFS_EBADF;
+
+	return PROCESS_getCurrent()->resources[fd].vnode->vnode_op->ioctl(PROCESS_getCurrent()->resources[fd].vnode, command, arg);
+}
+
 void VFS_register_new_filesystem(filesystem_t* fs)
 {
 	if(num_registered_fs >= VFS_MAX_FS)

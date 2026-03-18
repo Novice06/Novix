@@ -34,6 +34,7 @@ void create_console()
     console->priv = NULL;
     console->read = read;
     console->write = write;
+    console->ioctl = NULL;
 
     add_device(console);
 }

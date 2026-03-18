@@ -345,6 +345,7 @@ void KEYBOARD_initialize()
     new->priv = NULL;
     new->read = read;
     new->write = write;
+    new->ioctl = NULL;
 
     add_device(new);
     

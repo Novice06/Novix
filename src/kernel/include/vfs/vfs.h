@@ -120,6 +120,7 @@ typedef struct vnodeops
 {
     int64_t (*read)(struct vnode* node, void *buffer, size_t size, uint32_t offset, uint32_t flags);
     int64_t (*write)(struct vnode* node, const void *buffer, size_t size, uint32_t offset, uint32_t flags);
+    int (*ioctl)(struct vnode* node, const int command, void* arg);
 
     /* Find a file/directory by name */
     int (*lookup)(struct vnode* node_dir, const char* name, struct vnode** result);
@@ -156,3 +157,5 @@ int64_t VFS_read(int fd, void *buffer, size_t size);
 #define VFS_FD_STDERR   -2
 #define VFS_FD_DEBUG    -3
 int64_t VFS_write(int fd, const void *buffer, size_t size);
+
+int VFS_ioctl(int fd, int command, void* arg);
