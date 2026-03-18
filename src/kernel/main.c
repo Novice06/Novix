@@ -40,6 +40,7 @@
 #include <drivers/device.h>
 #include <drivers/console.h>
 #include <drivers/keyboard.h>
+#include <drivers/framebuffer.h>
 
 const char logo[] = 
 "\
@@ -703,12 +704,14 @@ unsigned char hello_bin[] = {
 };
 unsigned int hello_bin_len = 6808;
 
+video_info_t vidInfo;
 
 void init_process()
 {
     init_device_manager();
     create_console();
     KEYBOARD_initialize();
+    FRAMEBUFFER_init(&vidInfo);
 
     VFS_init();
     if(VFS_mount("ramfs", NULL) == VFS_OK)
@@ -717,6 +720,17 @@ void init_process()
     // we should make the directory first!
     if(VFS_mount("devfs", "/dev") == VFS_OK)
         log_info("init_process", "devfs mounted successfully at /dev");
+
+    int fd = VFS_open("/dev/fb", VFS_O_RDONLY);
+    
+    surface_t rect = {
+        .height = vidInfo.height,
+        .x = 0,
+        .y = 0,
+        .pixels = (void*)0xc0000000,
+        .width = vidInfo.width,
+    };
+    VFS_ioctl(fd, FB_BLIT_RECT, &rect);
 
     SYSCALL_initialize();
 
@@ -737,7 +751,6 @@ void __attribute__((cdecl)) start(Boot_info* boot_info)
     log_info("kernel", "kernel size %d Kb", roundUp_div(kernel_size, 1024));
 
     // somehow after all systems initialize Boot_info* info gets overwritten or smthing so we gonna save what we'll need first !
-    video_info_t vidInfo;
     memcpy(&vidInfo, &boot_info->video_info, sizeof(video_info_t));
 
     HAL_initialize();
@@ -748,22 +761,6 @@ void __attribute__((cdecl)) start(Boot_info* boot_info)
     VMALLOC_initialize();
 
     List_init(kmalloc, kfree);
-
-    printf("info: 0x%x\n", (vidInfo.height * vidInfo.pitch * vidInfo.bytes_per_pixel));
-
-    for(int i = 0; i < (vidInfo.height * vidInfo.pitch * vidInfo.bytes_per_pixel) / 0x1000; i++)
-        VIRTMEM_mapPageCustom((void*)vidInfo.framebuffer + (i * 0x1000), (void*)0xf0000000 + (i * 0x1000), true);
-
-    uint32_t color = (135 << vidInfo.red_position) | (206 << vidInfo.green_position) | (235 << vidInfo.blue_position);
-    void* framebuffer = (void*)(void*)0xf0000000;
-    for(int y = 0; y < vidInfo.height; y++)
-    {
-        void* row = framebuffer + y * vidInfo.pitch;
-        for(int x = 0; x < vidInfo.width; x++)
-        {
-            memcpy(row + x * vidInfo.bytes_per_pixel, &color, vidInfo.bytes_per_pixel);
-        }
-    }
 
     SCHEDULER_initialize();
     PROCESS_createFrom(init_process);

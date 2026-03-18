@@ -18,24 +18,20 @@
 */
 
 #pragma once
-
+#include <boot_info.h>
 #include <stdint.h>
-#include <list.h>
 
-#define MAX_NAME_LENGTH 64
+typedef enum {
+    FB_GET_INFO,
+    FB_BLIT_RECT,
+}REQUEST;
 
-typedef struct device
+typedef struct surface
 {
-	char name[MAX_NAME_LENGTH];
+    int x, y;
+    uint16_t width;
+    uint16_t height;
+    void* pixels;
+}surface_t;
 
-	// functions to interact with the device
-	int64_t (*read)(uint8_t* buffer, uint32_t offset , size_t len, void* dev, uint32_t flags);
-	int64_t (*write)(const uint8_t *buffer, uint32_t offset, size_t len, void* dev, uint32_t flags);
-	int (*ioctl)(int request, void* arg);
-
-	void *priv;	// private data of the device ...
-} device_t;
-
-void init_device_manager();
-void add_device(device_t* dev);
-device_t* lookup_device(const char* name);
+void FRAMEBUFFER_init(video_info_t* boot_info);

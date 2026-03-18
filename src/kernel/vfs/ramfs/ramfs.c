@@ -176,6 +176,7 @@ vnodeops_t ramfs_vnode_op = {
     .read = read,
     .write = write,
     .lookup = lookup,
+    .ioctl = NULL
 };
 
 void ramfs_init()
