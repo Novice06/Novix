@@ -46,7 +46,7 @@ bool __attribute__((cdecl)) x86_Disk_Read(uint8_t drive,
                                           uint8_t count,
                                           void* lowerDataOut);
 
-bool __attribute__((cdecl)) x86_Disk_ExtendedRead(uint8_t drive, uint32_t count, uint64_t lba, void* lowerDataOut);
+bool __attribute__((cdecl)) x86_Disk_ExtendedRead(uint8_t drive, uint16_t count, uint64_t lba, void* lowerDataOut);
 
 uint32_t __attribute__((cdecl)) x86_Get_MemorySize();
 uint32_t __attribute__((cdecl)) x86_Get_MemoryMap(Memory_mapEntry* entries, uint32_t* memoryBlockCount);

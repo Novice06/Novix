@@ -85,6 +85,31 @@ extern LoadGDT
 
 %endmacro
 
+; %macro LinearToSegOffset 4
+
+;     mov %3, %1
+;     cmp %3, 0xFFFF0        ; Check if address exceeds the standard real-mode limit (~1 MB)
+;     jbe %%standard_calc    ; If <= 0xFFFF0, use standard calculation
+
+;     ; --- HMA case (High Memory Area: 0xFFFF0 to 0x10FFEF) ---
+;     mov %4, 0xFFFF
+;     mov %2, %4             ; Segment = 0xFFFF
+;     sub %3, 0xFFFF0        ; Offset = address - 0xFFFF0
+;     jmp %%done
+
+; %%standard_calc:
+;     ; --- Standard case (< 1 MB) ---
+;     shr %3, 4              ; Segment = address / 16
+;     mov %2, %4             ; Move segment into the segment register
+;     mov %3, %1
+;     and %3, 0x0F           ; Offset = address % 16
+
+; %%done:
+;     ; Result:
+;     ; %2 = segment
+;     ; %3 = offset
+; %endmacro
+
 
 global x86_outb
 x86_outb:
@@ -120,6 +145,10 @@ x86_Disk_CheckExtensions:
     push esi
     push di
 
+
+    ; mov si, .debug
+    ; call .puts
+
     mov ah, 0x41
     mov dl, [bp+8]
     mov di, 0
@@ -127,6 +156,13 @@ x86_Disk_CheckExtensions:
     mov bx, 0x55AA
     stc
     int 13h
+
+;     mov si, .debug
+;     call .puts
+
+; .halt:
+;     hlt
+;     jmp .halt
 
     jc .no_disk_extensions
     cmp bx, 0xAA55
@@ -138,6 +174,31 @@ x86_Disk_CheckExtensions:
 
 .no_disk_extensions:
     mov eax, 0
+
+; .puts:
+;     ; save registers we will modify
+;     push si
+;     push ax
+;     push bx
+
+; .loop:
+;     lodsb               ; loads next character in al
+;     or al, al           ; verify if next character is null?
+;     jz .done
+
+;     mov ah, 0x0E        ; call bios interrupt
+;     mov bh, 0           ; set page number to 0
+;     int 0x10
+
+;     jmp .loop
+
+; .done:
+;     pop bx
+;     pop ax
+;     pop si    
+;     ret
+
+; .debug: db "<<DEBUGING>>", 0
 
 .end
     ; restore regs
@@ -340,8 +401,8 @@ x86_Disk_ExtendedRead:
     push edi
     push es
 
-    mov eax, [bp+12]    ;count
-    mov [extensions_dap.count], eax
+    mov ax, [bp+12]    ;count
+    mov [extensions_dap.count], ax
 
     LinearToSegOffset [bp + 24], es, esi, si
     mov [extensions_dap.offset], si
@@ -564,9 +625,13 @@ x86_VESA_GetInfo:
     [bits 16]
 
     ; save regs
+    push ebp
+    push esi
+    push edi
+    push ebx
     push es
-    push bx
-    push di
+
+    cld
 
     mov ax, 4F00h
     LinearToSegOffset [bp+8], es, edi, di
@@ -583,9 +648,11 @@ x86_VESA_GetInfo:
 
 .end:
     ; restore regs
-    pop di
-    pop bx
     pop es
+    pop ebx
+    pop edi
+    pop esi
+    pop ebp
 
     ; return
 

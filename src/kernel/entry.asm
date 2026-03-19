@@ -18,9 +18,9 @@
 
 [bits 32]
 
-PAGE_DIR        equ 0x80000 ; page directory table
-PAGE_TABLE_0    equ 0x81000 ; 0th page table. Address must be 4KB aligned
-PAGE_TABLES_FROM_768  equ 0x82000 ; 768th page table. Address must be 4KB aligned
+PAGE_DIR        equ 0x50000 ; page directory table
+PAGE_TABLE_0    equ 0x52000 ; 0th page table. Address must be 4KB aligned
+PAGE_TABLES_FROM_768  equ 0x54000 ; 768th page table. Address must be 4KB aligned
 
 PAGE_FLAGS      equ 0x03 ; attributes (page is present;page is writable; supervisor mode)
 PAGE_ENTRIES    equ 1024 ; each page table has 1024 entries
@@ -35,6 +35,12 @@ extern start
 global entry
 
 entry:
+    ; 1. memeset the page direcotry (CRUCIAL)
+    mov edi, PAGE_DIR
+    xor eax, eax
+    mov ecx, 1024
+    rep stosd
+
     mov edx, [esp+4]    ; boot_info struct from the bootloader
 
     ;------------------------------------------

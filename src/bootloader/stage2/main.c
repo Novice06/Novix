@@ -20,6 +20,7 @@
 
 
 #include <stdint.h>
+#include <memory.h>
 #include "stdio.h"
 #include "disk.h"
 #include "fat32.h"
@@ -63,6 +64,13 @@ void read_onPartition(void* buffer, uint32_t lba, uint32_t sector_num)
 void __attribute__((cdecl)) start(uint16_t bootDrive)
 {
     clr();
+    printf("booted from: 0x%x\n", bootDrive);
+
+    // if(!init_graphics(1440, 900, &g_info->video_info)) 
+    // {
+    //     printf("graphics must had failed or something !!\n");
+    //     goto end;
+    // }
     
     if (!DISK_Initialize(&disk, bootDrive))
     {
@@ -96,17 +104,24 @@ void __attribute__((cdecl)) start(uint16_t bootDrive)
     file_t* kernel = fat32_open("/kernel.bin");
     if(!kernel) goto end;
 
-    // printf("kernel loaded proof: name: %s, size: %d\n", kernel->entry->filename, kernel->entry->fileSize);
+    printf("kernel found proof: name: %s, size: %d\n", kernel->entry->filename, kernel->entry->fileSize);
     // goto end;
 
     int read = fat32_read(kernel, Kernel_addr, kernel->entry->fileSize);
 
     if(read != kernel->entry->fileSize) goto end;
 
+    printf("memory map\n");
     memoryDetect(g_info);
     g_info->bootDrive = bootDrive;
+    // for(int i = 0; i < g_info->memoryBlockCount; i++)
+    //     printf("base: 0x%llx, length: 0x%llx, type: %d, acpi: %d\n", g_info->memoryBlockEntries[i].base, g_info->memoryBlockEntries[i].length, g_info->memoryBlockEntries[i].type, g_info->memoryBlockEntries[i].acpi);
 
-    if(!init_graphics(1440, 900, &g_info->video_info)) goto end;
+    // goto end;
+
+    // printf("jump to the kernel but before:\n\n");
+    // print_buffer("kernel: ", (void*)Kernel_addr + (16 * 512), 512);
+    goto end;
 
     // execute kernel
     KernelStart kernelStart = (KernelStart)Kernel_addr;

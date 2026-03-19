@@ -430,6 +430,8 @@ int fat32_read(file_t* this_file, void* buffer, size_t size)
 
     uint32_t current_cluster = this_file->entry->firstClusterLow | (this_file->entry->firstClusterHigh << 16);
     uint32_t skipped_clusters = (uint32_t)(this_file->readPos / (bootSector.sectors_per_cluster * bootSector.bytes_per_sector));
+
+    uint32_t f = current_cluster;
     
     /* Some clusters are skipped since, based on the read position, their content doesn't need to be read. */
     for(int i = 0; i < skipped_clusters; i++)
@@ -445,6 +447,9 @@ int fat32_read(file_t* this_file, void* buffer, size_t size)
         /* "Bytes to read, to ensure we don’t exceed the size of the data in the buffer. */
         uint16_t byte_to_read = (bootSector.sectors_per_cluster * bootSector.bytes_per_sector) - offset;
         byte_to_read = ((byte_to_read + to_read) > size) ? (size - to_read) : byte_to_read; // ajust the byte to read based on the actual size to read !
+
+        print_buffer("kernel: lba: %d", (void*)working_buffer, 512);
+        printf("lba: %d, firstC %d, flba: %d\n", cluster_to_Lba(current_cluster), f, cluster_to_Lba(f));
 
         memcpy(buffer + to_read, working_buffer + offset, byte_to_read);
 

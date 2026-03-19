@@ -745,10 +745,12 @@ void __attribute__((cdecl)) start(Boot_info* boot_info)
     uint32_t kernel_size = ((uint32_t)(&__end) - 0xc0000000 + 0x100000) - 0x100000;
     memset(&__bss_start, 0, (&__bss_end) - (&__bss_start));
 
-    log_info("kernel", "the Kernel is running");
+    printf("[%s] %s\n", "kernel", "the Kernel is running");
 
-    log_info("kernel", "kernel start 0x%x, kernel end 0x%x", &__text_start, &__end);
-    log_info("kernel", "kernel size %d Kb", roundUp_div(kernel_size, 1024));
+    printf("kernel start 0x%x, kernel end 0x%x\n", &__text_start, &__end);
+    printf("kernel size %d Kb\n", roundUp_div(kernel_size, 1024));
+
+    goto halt;
 
     // somehow after all systems initialize Boot_info* info gets overwritten or smthing so we gonna save what we'll need first !
     memcpy(&vidInfo, &boot_info->video_info, sizeof(video_info_t));
@@ -765,6 +767,7 @@ void __attribute__((cdecl)) start(Boot_info* boot_info)
     SCHEDULER_initialize();
     PROCESS_createFrom(init_process);
 
+halt:
     for(;;)
     {
         //yield();

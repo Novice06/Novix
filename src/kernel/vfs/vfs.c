@@ -304,9 +304,9 @@ int64_t VFS_write(int fd, const void *buffer, size_t size)
     {
     case VFS_FD_STDOUT:
     case VFS_FD_STDERR:
-        // for (size_t i = 0; i < size; i++)
-        //     VGA_putc(*((uint8_t*)buffer+i));
-        // return size;
+        for (size_t i = 0; i < size; i++)
+            VGA_putc(*((uint8_t*)buffer+i));
+        return size;
 
     case VFS_FD_DEBUG:
         for (size_t i = 0; i < size; i++)

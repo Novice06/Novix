@@ -32,12 +32,21 @@ int diff(int x, int y)
 bool init_graphics(int desired_width, int desired_height, video_info_t* videoInfo)
 {
     VbeInfoBlock_t info;
+    memset(&info, 0, sizeof(VbeInfoBlock_t));
+    info.VbeSignature[0] = 'V';
+    info.VbeSignature[1] = 'B';
+    info.VbeSignature[2] = 'E';
+    info.VbeSignature[3] = '2';
 
+    printf("please works...\n");
     if(!x86_VESA_GetInfo(&info))
     {
         printf("not supported :(\n");
         return false;
     }
+
+    printf("I dont have enough info !!\n");
+    // for(;;);
 
     uint16_t offset  = info.VideoModePtr[0];
     uint16_t segment = info.VideoModePtr[1];
@@ -74,6 +83,7 @@ bool init_graphics(int desired_width, int desired_height, video_info_t* videoInf
         return false;
     }
 
+    printf("Im sure this funcction causes problems\n");
     if(!x86_VESA_SetMode(chosen_mode, &info))
     {
         debugf("failed to set mode: %d, %d x %d\n", chosen_mode, current_width, current_height);
