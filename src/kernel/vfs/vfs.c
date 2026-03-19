@@ -340,6 +340,46 @@ int VFS_ioctl(int fd, int command, void* arg)
 	return PROCESS_getCurrent()->resources[fd].vnode->vnode_op->ioctl(PROCESS_getCurrent()->resources[fd].vnode, command, arg);
 }
 
+int VFS_identify(int fd, uint64_t* fileSize)
+{
+	if(!is_fd_valid(fd))
+		return VFS_EBADF;
+
+	return PROCESS_getCurrent()->resources[fd].vnode->vnode_op->identify(PROCESS_getCurrent()->resources[fd].vnode, fileSize);
+}
+
+int VFS_seek(int fd, size_t offset, int whence)
+{
+	if(!is_fd_valid(fd))
+		return VFS_EBADF;
+
+	switch (whence)
+	{
+	case VFS_SEEK_SET:
+		PROCESS_getCurrent()->resources[fd].position = offset;
+		break;
+	
+	case VFS_SEEK_CUR:
+		PROCESS_getCurrent()->resources[fd].position += offset;
+		break;
+
+	case VFS_SEEK_END:
+		uint64_t file_size;
+		VFS_identify(fd, &file_size);
+		PROCESS_getCurrent()->resources[fd].position = file_size + offset;
+		break;
+	
+	default:
+		break;
+	}
+}
+
+int VFS_mkdir(const char* path, uint16_t mode)
+{
+	printf("Trop la fleme d'implementer ca !\n");
+	return VFS_ERROR;
+}
+
 void VFS_register_new_filesystem(filesystem_t* fs)
 {
 	if(num_registered_fs >= VFS_MAX_FS)

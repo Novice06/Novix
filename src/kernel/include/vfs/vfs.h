@@ -51,6 +51,13 @@ typedef enum
     VFS_EAGAIN     = -13,   /* he operation cannot be completed right now Try again */
 } vfs_error_t;
 
+typedef enum
+{
+    VFS_SEEK_SET = 1 << 0,
+    VFS_SEEK_CUR = 1 << 1,
+    VFS_SEEK_END = 1 << 2,
+} vfs_whence_t;
+
 
 struct filesystem;
 struct vnode;
@@ -118,9 +125,10 @@ typedef struct vnode
  */
 typedef struct vnodeops
 {
-    int64_t (*read)(struct vnode* node, void *buffer, size_t size, uint32_t offset, uint32_t flags);
-    int64_t (*write)(struct vnode* node, const void *buffer, size_t size, uint32_t offset, uint32_t flags);
+    int64_t (*read)(struct vnode* node, void *buffer, size_t size, int64_t offset, uint32_t flags);
+    int64_t (*write)(struct vnode* node, const void *buffer, size_t size, int64_t offset, uint32_t flags);
     int (*ioctl)(struct vnode* node, const int command, void* arg);
+    int (*identify)(struct vnode* node, uint64_t* fileSize); // doesnt fill if NULL is passed
 
     /* Find a file/directory by name */
     int (*lookup)(struct vnode* node_dir, const char* name, struct vnode** result);
@@ -135,7 +143,7 @@ typedef struct file_descriptor
 {
     struct vnode *vnode;    /* The vnode associated with this file */
     uint16_t mode;          /* Mode in which the file was opened (read, write, etc.) */
-    uint32_t position;      /* Current position within the file (for reading/writing) */
+    uint64_t position;      /* Current position within the file (for reading/writing) */
 } file_descriptor_t;
 
 //============================================================================
@@ -159,3 +167,6 @@ int64_t VFS_read(int fd, void *buffer, size_t size);
 int64_t VFS_write(int fd, const void *buffer, size_t size);
 
 int VFS_ioctl(int fd, int command, void* arg);
+int VFS_identify(int fd, uint64_t* fileSize);
+int VFS_seek(int fd, size_t offset, int whence);
+int VFS_mkdir(const char* path, uint16_t mode);

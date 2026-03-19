@@ -29,8 +29,8 @@ typedef struct device
 	char name[MAX_NAME_LENGTH];
 
 	// functions to interact with the device
-	int64_t (*read)(uint8_t* buffer, uint32_t offset , size_t len, void* dev, uint32_t flags);
-	int64_t (*write)(const uint8_t *buffer, uint32_t offset, size_t len, void* dev, uint32_t flags);
+	int64_t (*read)(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags);
+	int64_t (*write)(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags);
 	int (*ioctl)(int request, void* arg);
 
 	void *priv;	// private data of the device ...

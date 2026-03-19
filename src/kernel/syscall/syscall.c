@@ -137,6 +137,24 @@ void SYSCALL_close(Registers* regs)
     regs->edx = VFS_close(regs->ebx);
 }
 
+void SYSCALL_ioctl(Registers* regs)
+{
+    regs->edx = VFS_ioctl(regs->ebx, regs->ecx, (void*)regs->esi);
+}
+
+void SYSCALL_seek(Registers* regs)
+{
+    int64_t offset = regs->edx;
+    offset = (offset << 32) | regs->ecx;
+
+    regs->edx = VFS_seek(regs->ebx, offset, regs->ecx);
+}
+
+void SYSCALL_mkdir(Registers* regs)
+{
+    regs->edx = VFS_mkdir((char*)regs->esi, regs->ebx);
+}
+
 void SYSCALL_keyeventToAscii(Registers* regs)
 {
     regs->ebx = KEYBOARD_scanToAscii((void*)regs->esi);
@@ -160,6 +178,8 @@ SyscallHandler Handlers[] = {
     [14]    = SYSCALL_write,
     [15]    = SYSCALL_close,
     [16]    = SYSCALL_keyeventToAscii,
+    [17]    = SYSCALL_ioctl,
+    [18]    = SYSCALL_seek,
 };
 
 void SYSCALL_handler(Registers* regs)
