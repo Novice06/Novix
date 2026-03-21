@@ -109,12 +109,8 @@ void fat32_init(readDiskSectors read)
     readSectors = read;
     readSectors(&bootSector, 0, 1);
 
-    // print_buffer("fat32bootsect: ", &bootSector, sizeof(bootSector));
-
-    FAT = (void*)MEMORY_FAT_ADDR;
+    FAT = (void*)MEMORY_FAT_ADDR;                   // now the fat will be loaded by chunck needed in get_next_cluster()
     working_buffer = (void*)MEMORY_FATBUFFER_ADDR;
-
-    readSectors(FAT, bootSector.reserved_sector_count, bootSector.table_size_32);
 }
 
 file_t* request_file_struc()
@@ -175,12 +171,18 @@ void free_fatDirEntry_struc(fat_dir_entry_t* entry)
 
 uint32_t get_next_cluster(uint32_t currentCluster)
 {    
-    return FAT[currentCluster] & 0x0FFFFFFF;
+    uint32_t fat_sector = (currentCluster * 4) / 512;
+
+    readSectors(FAT, bootSector.reserved_sector_count + fat_sector, 1);
+
+    uint32_t index_in_sector = currentCluster % 128;
+
+    return FAT[index_in_sector] & 0x0FFFFFFF;
 }
 
 uint32_t cluster_to_Lba(uint32_t cluster)
 {
-    uint16_t fat_total_size = (bootSector.table_size_32 * bootSector.table_count);
+    uint32_t fat_total_size = (bootSector.table_size_32 * bootSector.table_count);
 
     return (bootSector.reserved_sector_count + fat_total_size) + (cluster - 2) * bootSector.sectors_per_cluster;
 }
@@ -447,9 +449,6 @@ int fat32_read(file_t* this_file, void* buffer, size_t size)
         /* "Bytes to read, to ensure we don’t exceed the size of the data in the buffer. */
         uint16_t byte_to_read = (bootSector.sectors_per_cluster * bootSector.bytes_per_sector) - offset;
         byte_to_read = ((byte_to_read + to_read) > size) ? (size - to_read) : byte_to_read; // ajust the byte to read based on the actual size to read !
-
-        print_buffer("kernel: lba: %d", (void*)working_buffer, 512);
-        printf("lba: %d, firstC %d, flba: %d\n", cluster_to_Lba(current_cluster), f, cluster_to_Lba(f));
 
         memcpy(buffer + to_read, working_buffer + offset, byte_to_read);
 

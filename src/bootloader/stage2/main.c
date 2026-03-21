@@ -66,15 +66,15 @@ void __attribute__((cdecl)) start(uint16_t bootDrive)
     clr();
     printf("booted from: 0x%x\n", bootDrive);
 
-    // if(!init_graphics(1440, 900, &g_info->video_info)) 
-    // {
-    //     printf("graphics must had failed or something !!\n");
-    //     goto end;
-    // }
+    if(!init_graphics(1440, 900, &g_info->video_info)) 
+    {
+        debugf("graphics must had failed or something !!\n");
+        goto end;
+    }
     
     if (!DISK_Initialize(&disk, bootDrive))
     {
-        printf("Disk init error\r\n");
+        debugf("Disk init error\r\n");
         goto end;
     }
 
@@ -97,31 +97,17 @@ void __attribute__((cdecl)) start(uint16_t bootDrive)
         goto end;
     }
 
-    // printf("partition start at: %d, total sectors: %d\n", boot_partition->relative_sector, boot_partition->total_sectors);
-    
     fat32_init(read_onPartition);
 
     file_t* kernel = fat32_open("/kernel.bin");
     if(!kernel) goto end;
 
-    printf("kernel found proof: name: %s, size: %d\n", kernel->entry->filename, kernel->entry->fileSize);
-    // goto end;
-
     int read = fat32_read(kernel, Kernel_addr, kernel->entry->fileSize);
 
     if(read != kernel->entry->fileSize) goto end;
 
-    printf("memory map\n");
     memoryDetect(g_info);
     g_info->bootDrive = bootDrive;
-    // for(int i = 0; i < g_info->memoryBlockCount; i++)
-    //     printf("base: 0x%llx, length: 0x%llx, type: %d, acpi: %d\n", g_info->memoryBlockEntries[i].base, g_info->memoryBlockEntries[i].length, g_info->memoryBlockEntries[i].type, g_info->memoryBlockEntries[i].acpi);
-
-    // goto end;
-
-    // printf("jump to the kernel but before:\n\n");
-    // print_buffer("kernel: ", (void*)Kernel_addr + (16 * 512), 512);
-    goto end;
 
     // execute kernel
     KernelStart kernelStart = (KernelStart)Kernel_addr;

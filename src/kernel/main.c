@@ -37,6 +37,7 @@
 #include <multitasking/lock.h>
 #include <multitasking/ipc/message.h>
 #include <multitasking/ipc/shared_memory.h>
+#include <drivers/vga_text.h>
 #include <drivers/device.h>
 #include <drivers/console.h>
 #include <drivers/keyboard.h>
@@ -743,14 +744,12 @@ void __attribute__((cdecl)) start(Boot_info* boot_info)
 {
     // calculate the kernel size and memset the bss section
     uint32_t kernel_size = ((uint32_t)(&__end) - 0xc0000000 + 0x100000) - 0x100000;
-    memset(&__bss_start, 0, (&__bss_end) - (&__bss_start));
+    memset(&__bss_start, 0, (uint32_t)(&__bss_end) - (uint32_t)(&__bss_start));
 
-    printf("[%s] %s\n", "kernel", "the Kernel is running");
+    log_info("kernel", "the Kernel is running");
 
-    printf("kernel start 0x%x, kernel end 0x%x\n", &__text_start, &__end);
-    printf("kernel size %d Kb\n", roundUp_div(kernel_size, 1024));
-
-    goto halt;
+    log_info("kernel", "kernel start 0x%x, kernel end 0x%x", &__text_start, &__end);
+    log_info("kernel", "kernel size %d Kb", roundUp_div(kernel_size, 1024));
 
     // somehow after all systems initialize Boot_info* info gets overwritten or smthing so we gonna save what we'll need first !
     memcpy(&vidInfo, &boot_info->video_info, sizeof(video_info_t));
