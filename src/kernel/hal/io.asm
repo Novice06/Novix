@@ -31,6 +31,20 @@ inb:
     in al, dx
     ret
 
+global outw
+outw:
+    mov dx, [esp + 4]
+    mov ax, [esp + 8]
+    out dx, ax
+    ret
+
+global inw
+inw:
+    mov dx, [esp + 4]
+    xor eax, eax
+    in ax, dx
+    ret
+
 global panic
 panic:
     cli

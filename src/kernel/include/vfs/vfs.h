@@ -168,5 +168,5 @@ int64_t VFS_write(int fd, const void *buffer, size_t size);
 
 int VFS_ioctl(int fd, int command, void* arg);
 int VFS_identify(int fd, uint64_t* fileSize);
-int VFS_seek(int fd, size_t offset, int whence);
+size_t VFS_seek(int fd, size_t offset, int whence);
 int VFS_mkdir(const char* path, uint16_t mode);

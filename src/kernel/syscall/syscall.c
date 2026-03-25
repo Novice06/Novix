@@ -147,7 +147,9 @@ void SYSCALL_seek(Registers* regs)
     int64_t offset = regs->edx;
     offset = (offset << 32) | regs->ecx;
 
-    regs->edx = VFS_seek(regs->ebx, offset, regs->ecx);
+    offset = VFS_seek(regs->ebx, offset, regs->edi);
+    regs->ecx = offset;
+    regs->edx = offset >> 32;
 }
 
 void SYSCALL_mkdir(Registers* regs)
@@ -180,6 +182,7 @@ SyscallHandler Handlers[] = {
     [16]    = SYSCALL_keyeventToAscii,
     [17]    = SYSCALL_ioctl,
     [18]    = SYSCALL_seek,
+    [19]    = SYSCALL_mkdir,
 };
 
 void SYSCALL_handler(Registers* regs)

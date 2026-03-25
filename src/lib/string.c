@@ -134,6 +134,15 @@ int strncmp(const char *str1, const char *str2, int num)
     return 0;
 }
 
+char *strcat(char *dst, const char *src) {
+    char *r = dst; while (*dst) dst++; while ((*dst++ = *src++)); return r;
+}
+char *strncat(char *dst, const char *src, size_t n) {
+    char *r = dst; while (*dst) dst++;
+    for (size_t i = 0; i < n && src[i]; i++) *dst++ = src[i];
+    *dst = '\0'; return r;
+}
+
 static char *_tok;
 char *strtok(char *s, const char *delim) {
     if (s) _tok = s;

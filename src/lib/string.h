@@ -21,11 +21,16 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <stddef.h>
+
 const char* strchr(const char* str, char chr);
 char* strcpy(char* dst, const char* src);
 char* strncpy(char* dst, const char* src, int num);
 unsigned strlen(const char* str);
 int strcmp(const char *str1, const char *str2);
 int strncmp(const char *str1, const char *str2, int num);
+char *strcat(char *dst, const char *src);
+char *strncat(char *dst, const char *src, size_t n);
 char *strtok(char *s, const char *delim);
 long strtol(char* start, char** end, int base);

@@ -42,6 +42,7 @@
 #include <drivers/console.h>
 #include <drivers/keyboard.h>
 #include <drivers/framebuffer.h>
+#include <drivers/ata.h>
 
 const char logo[] = 
 "\
@@ -713,6 +714,7 @@ void init_process()
     create_console();
     KEYBOARD_initialize();
     FRAMEBUFFER_init(&vidInfo);
+    ata_init();
 
     VFS_init();
     if(VFS_mount("ramfs", NULL) == VFS_OK)
@@ -721,6 +723,16 @@ void init_process()
     // we should make the directory first!
     if(VFS_mount("devfs", "/dev") == VFS_OK)
         log_info("init_process", "devfs mounted successfully at /dev");
+
+    int disk_fd = VFS_open("/dev/sda0", VFS_O_RDONLY);
+
+    if(disk_fd >= 0)
+    {
+        char buf[512];
+        VFS_read(disk_fd, buf, 1);
+
+        print_buffer("sector of partition: \n", buf, 512);
+    }
 
     int fd = VFS_open("/dev/fb", VFS_O_RDONLY);
     
