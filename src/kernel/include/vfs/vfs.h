@@ -20,6 +20,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
+#include <drivers/device.h>
 
 //============================================================================
 //    INTERFACE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
@@ -83,7 +84,7 @@ typedef struct vfs
 typedef struct filesystem
 {
     char fs_name[VFS_MAX_FILENAME];                                 /* Name of the file system (e.g., "ramfs", "ext2") */
-    int (*VFS_mount)(struct vfs* mountpoint);                       /* Function to mount the file system on a device */
+    int (*VFS_mount)(struct vfs* mountpoint, device_t* dev);        /* Function to mount the file system on a device */
     int (*VFS_unmount)(struct vfs* mountpoint);                     /* Function to unmount the file system */
     int (*get_root)(struct vfs* mountpoint, struct vnode** result); /* Get the root vnode of the mounted FS */
 }filesystem_t;
@@ -153,7 +154,7 @@ typedef struct file_descriptor
 void VFS_init();
 void VFS_register_new_filesystem(filesystem_t* fs);
 
-int VFS_mount(const char *fs_name, const char *mount_point);
+int VFS_mount(const char *fs_name, device_t* dev, const char *mount_point);
 int VFS_unmount(const char *mount_point);
 
 int VFS_open(const char *path, uint16_t mode);

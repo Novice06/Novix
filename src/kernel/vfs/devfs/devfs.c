@@ -30,7 +30,7 @@
 vnode_t* total_vnode[MAX_VNODE];
 
 int devfs_getroot(vfs_t* mountpoint, vnode_t** result);
-int devfs_mount(vfs_t* mountpoint);
+int devfs_mount(vfs_t* mountpoint, device_t* dev);
 int devfs_unmount(vfs_t* mountpoint);
 
 filesystem_t devfs_op = {
@@ -64,7 +64,7 @@ void devfs_init()
     VFS_register_new_filesystem(&devfs_op);
 }
 
-int devfs_mount(vfs_t* mountpoint)
+int devfs_mount(vfs_t* mountpoint, device_t* dev)
 {
     vnode_t* root = kmalloc(sizeof(vnode_t));
 

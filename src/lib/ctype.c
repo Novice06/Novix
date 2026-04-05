@@ -51,3 +51,16 @@ bool isdigit(char chr)
 
     return false;
 }
+
+int isspace(char ch) {
+    return ch == ' ' ||
+          ch == '\n' ||
+          ch == '\r' ||
+          ch == '\v' ||
+          ch == '\f' ||
+          ch == '\t';
+}
+
+int isalnum(int c) {
+    return isalpha(c) || isdigit(c);
+}

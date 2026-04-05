@@ -23,8 +23,8 @@
 #include <drivers/device.h>
 #include <drivers/vga_text.h>
 
-static int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags);
-static int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags);
+static int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags);
+static int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags);
 
 void create_console()
 {
@@ -39,12 +39,12 @@ void create_console()
     add_device(console);
 }
 
-int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags)
+int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags)
 {
     // keyboard
 }
 
-int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags)
+int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags)
 {
     for(size_t i = 0; i < len; i++)
         VGA_putc(buffer[i]);

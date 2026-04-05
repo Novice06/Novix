@@ -20,6 +20,7 @@
 #include <debug.h>
 #include <drivers/vga_text.h>
 #include <drivers/e9_port.h>
+#include <drivers/device.h>
 #include <mem_manager/heap.h>
 #include <string.h>
 #include <vfs/vfs.h>
@@ -28,6 +29,7 @@
 
 #include "ramfs/ramfs.h"
 #include "devfs/devfs.h"
+#include "fat32/fat32.h"
 
 //============================================================================
 //    IMPLEMENTATION PRIVATE DEFINITIONS / ENUMERATIONS / SIMPLE TYPEDEFS
@@ -122,6 +124,7 @@ void VFS_init()
 
 	ramfs_init();
 	devfs_init();
+	fat12_init();
 }
 
 vnode_t* lookup_path_name(const char* path)
@@ -173,7 +176,7 @@ vnode_t* lookup_path_name(const char* path)
 	return node_out;
 }
 
-int VFS_mount(const char *fs_name, const char *mount_point)
+int VFS_mount(const char *fs_name, device_t* dev, const char *mount_point)
 {
 	vfs_t *new_vfs;
 	filesystem_t *fs;
@@ -210,7 +213,7 @@ int VFS_mount(const char *fs_name, const char *mount_point)
 		new_vfs->vnodecovered->VFS_mountedhere = new_vfs;
 	}
 
-	if(new_vfs->vfs_op->VFS_mount(new_vfs) != VFS_OK)
+	if(new_vfs->vfs_op->VFS_mount(new_vfs, dev) != VFS_OK)
         return VFS_ERROR;
     
 	add_mount_point(new_vfs);

@@ -316,8 +316,8 @@ void KEYBOARD_enable()
     g_keyboard_stateDisabled = false;
 }
 
-static int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags);
-static int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags);
+static int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags);
+static int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags);
 
 void KEYBOARD_initialize()
 {
@@ -367,7 +367,7 @@ char KEYBOARD_scanToAscii(key_event_t* key)
         return asciiTable[key->code];
 }
 
-int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags)
+int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags)
 {
     size_t toread = len;
     bool isFulfilled = false;
@@ -425,7 +425,7 @@ int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t f
     return toread;
 }
 
-int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags)
+int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags)
 {
     // write to keyboard ?
 }

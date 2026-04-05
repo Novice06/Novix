@@ -30,8 +30,8 @@
 
 video_info_t info;
 
-static int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags);
-static int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags);
+static int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags);
+static int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags);
 static int ioctl(int request, void* arg);
 
 void FRAMEBUFFER_init(video_info_t* boot_info)
@@ -54,7 +54,7 @@ void FRAMEBUFFER_init(video_info_t* boot_info)
     add_device(fb);
 }
 
-int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags)
+int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags)
 {
     uint32_t limit = info.pitch * info.height * info.bytes_per_pixel;
     if(offset+len > limit)
@@ -65,7 +65,7 @@ int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t f
     return len;
 }
 
-int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags)
+int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags)
 {
     uint32_t limit = info.pitch * info.height * info.bytes_per_pixel;
     if(offset+len > limit)

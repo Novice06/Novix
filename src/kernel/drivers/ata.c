@@ -543,14 +543,14 @@ void ata_init(void) {
     
 }
 
-int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* dev, uint32_t flags)
+int64_t read(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags)
 {
-    device_info* dev_info = (void*)dev;
+    device_info* dev_info = (void*)priv;
     return ATAread_sectors(dev_info->dev, offset + dev_info->relative_sector, len, (uint16_t*)buffer) == 0 ? (uint8_t)len : 0;
 }
 
-int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* dev, uint32_t flags)
+int64_t write(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags)
 {
-    device_info* dev_info = (void*)dev;
+    device_info* dev_info = (void*)priv;
     return ATAwrite_sectors(dev_info->dev, offset + dev_info->relative_sector, len, (uint16_t*)buffer) == 0 ? (uint8_t)len : 0;
 }

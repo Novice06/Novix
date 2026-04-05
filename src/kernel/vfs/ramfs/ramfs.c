@@ -22,6 +22,7 @@
 #include <string.h>
 #include <memory.h>
 #include <mem_manager/heap.h>
+#include <drivers/device.h>
 #include <vfs/vfs.h>
 
 #include "ramfs.h"
@@ -156,7 +157,7 @@ typedef struct ramfs_info
     treenode_t* root_node;
 }fs_info_t;
 
-int ramfs_mount(vfs_t* mountpoint);
+int ramfs_mount(vfs_t* mountpoint, device_t* dev);
 int ramfs_unmount(vfs_t* mountpoint);
 int ramfs_get_root(vfs_t* mountpoint, vnode_t** result);
 
@@ -201,6 +202,7 @@ treenode_t* ramfs_createRoot()
     ramfs_write(hello, (const uint8_t*)"hello world !", 13, 0);
 
     ramfs_create_node(root_fs, "dev", NODE_DIRECTORY);
+    ramfs_create_node(root_fs, "mnt", NODE_DIRECTORY);
 
     return root_fs;
 }
@@ -215,7 +217,7 @@ treenode_t* ramfs_createRoot()
  * The mountpoint private data is then linked to the filesystem specific info,
  * enabling the VFS to access its contents.
  */
-int ramfs_mount(vfs_t* mountpoint)
+int ramfs_mount(vfs_t* mountpoint, device_t* dev)
 {
     fs_info_t* fs_info = kmalloc(sizeof(fs_info_t));
 

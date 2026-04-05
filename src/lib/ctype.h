@@ -26,3 +26,5 @@ bool isupper(char chr);
 char toupper(char chr);
 bool isalpha(char chr);
 bool isdigit(char chr);
+int isspace(char ch);
+int isalnum(int c);

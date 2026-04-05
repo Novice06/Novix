@@ -19,23 +19,10 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <list.h>
+#include <drivers/device.h>
+#include <vfs/vfs.h>
 
-#define MAX_NAME_LENGTH 64
+#define MAX_VNODE_PER_VFS   256
 
-typedef struct device
-{
-	char name[MAX_NAME_LENGTH];
+void fat12_init();
 
-	// functions to interact with the device
-	int64_t (*read)(uint8_t* buffer, int64_t offset , size_t len, void* priv, uint32_t flags);
-	int64_t (*write)(const uint8_t *buffer, int64_t offset, size_t len, void* priv, uint32_t flags);
-	int (*ioctl)(int request, void* arg);
-
-	void *priv;	// private data of the device ...
-} device_t;
-
-void init_device_manager();
-void add_device(device_t* dev);
-device_t* lookup_device(const char* name);

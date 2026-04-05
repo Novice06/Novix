@@ -717,11 +717,11 @@ void init_process()
     ata_init();
 
     VFS_init();
-    if(VFS_mount("ramfs", NULL) == VFS_OK)
+    if(VFS_mount("ramfs", NULL, NULL) == VFS_OK)
         log_info("init_process", "ramfs mounted successfully at /");
 
     // we should make the directory first!
-    if(VFS_mount("devfs", "/dev") == VFS_OK)
+    if(VFS_mount("devfs", NULL, "/dev") == VFS_OK)
         log_info("init_process", "devfs mounted successfully at /dev");
 
     int disk_fd = VFS_open("/dev/sda0", VFS_O_RDONLY);
@@ -733,6 +733,22 @@ void init_process()
 
         print_buffer("sector of partition: \n", buf, 512);
     }
+    VFS_close(disk_fd);
+
+    // we should make the directory first!
+    if(VFS_mount("fat32", lookup_device("sda0"), "/mnt") == VFS_OK)
+        log_info("init_process", "fat32 mounted successfully at /mnt");
+
+    disk_fd = VFS_open("/mnt/kernel.bin", VFS_O_RDONLY);
+
+    if(disk_fd >= 0)
+    {
+        char buf[512];
+        VFS_read(disk_fd, buf, 512);
+
+        print_buffer("kernel.bin [512]: \n", buf, 512);
+    }
+    VFS_close(disk_fd);
 
     int fd = VFS_open("/dev/fb", VFS_O_RDONLY);
     
