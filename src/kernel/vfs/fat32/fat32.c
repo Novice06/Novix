@@ -33,8 +33,13 @@ int fat32_get_root(vfs_t* mountpoint, vnode_t** result);
 
 static int64_t read(vnode_t* node, void *buffer, size_t size, int64_t offset, uint32_t flags);
 static int64_t write(vnode_t* node, const void *buffer, size_t size, int64_t offset, uint32_t flags);
+static int ioctl(struct vnode* node, const int command, void* arg);
 static int lookup(vnode_t* node, const char* name, struct vnode** result);
-static int identify(struct vnode* node, uint64_t* fileSize);
+static int trunc(struct vnode* node);
+static int create(struct vnode* node_dir, const char* name, vtype type);
+static int remove(struct vnode* node);
+static int readdir(struct vnode* node_dir, struct dirent* buffer, uint32_t count);
+static int stat(struct vnode* node, vfs_stat_t* stat);
 
 filesystem_t fat32_op = {
     // fs_name will be filled later
@@ -48,8 +53,12 @@ vnodeops_t fat32_vnode_op = {
     .read = read,
     .write = write,
     .lookup = lookup,
-    .ioctl = NULL,
-    .identify = identify
+    .ioctl = ioctl,
+    .trunc = trunc,
+    .create = create,
+    .remove = remove,
+    .readdir = readdir,
+    .stat = stat,
 };
 
 void fat12_init()
@@ -149,6 +158,11 @@ int fat32_get_root(vfs_t* mountpoint, vnode_t** result)
     return VFS_OK;
 }
 
+int ioctl(struct vnode* node, const int command, void* arg)
+{
+    return VFS_OK;
+}
+
 static vnode_t* create_vnode(vfs_t* mountpoint, file_t* inode_info)
 {
     fat32_info_t* fs_info = (fat32_info_t*)mountpoint->vfs_data;
@@ -160,7 +174,10 @@ static vnode_t* create_vnode(vfs_t* mountpoint, file_t* inode_info)
         {
             file_t* existing_inode = (file_t*)fs_info->total_vnode[i]->vnode_data;
 
-            if(strncmp(existing_inode->entry.filename, inode_info->entry.filename, 11) == 0)
+            uint32_t existing_firstCluster = existing_inode->entry.firstClusterLow | (existing_inode->entry.firstClusterHigh << 16);
+            uint32_t new_firstCluster = inode_info->entry.firstClusterLow | (inode_info->entry.firstClusterHigh << 16);
+
+            if(strncmp(existing_inode->entry.filename, inode_info->entry.filename, 11) == 0 && existing_firstCluster == new_firstCluster)
                 return fs_info->total_vnode[i];    // if the vnode already exist in the vnode table
         }
     }
@@ -260,7 +277,72 @@ int lookup(vnode_t* node, const char* name, struct vnode** result)
     return VFS_OK;
 }
 
-int identify(struct vnode* node, uint64_t* fileSize)
+int create(struct vnode* node_dir, const char* name, vtype type)
 {
+    file_t* dir = node_dir->vnode_data;
+    fat32_info_t* fs_info = node_dir->vnode_vfs->vfs_data;
+
+    if(fat32_make(fs_info, dir, name, type == VDIR ? true : false)) return VFS_OK;
+
     return VFS_ERROR;
+}
+
+int trunc(struct vnode* node)
+{
+    file_t* file = node->vnode_data;
+    fat32_info_t* fs_info = node->vnode_vfs->vfs_data;
+
+    fat32_trunc(fs_info, file);
+    return VFS_OK;
+}
+
+int remove(struct vnode* node)
+{
+    file_t* file = node->vnode_data;
+    fat32_info_t* fs_info = node->vnode_vfs->vfs_data;
+
+    fat32_delete(fs_info, file);
+    return VFS_OK;
+}
+
+
+int stat(struct vnode* node, vfs_stat_t* stat)
+{
+    file_t* file = node->vnode_data;
+
+    stat->accessed = file->entry.lastAccessDate;
+    stat->created  = file->entry.creationTime;
+    stat->modified = file->entry.creationTime;
+    stat->permissions = 0;
+    stat->size = file->entry.fileSize;
+    stat->type = node->vnode_type;
+
+    return VFS_OK;
+}
+
+int readdir(struct vnode* node_dir, struct dirent* buffer, uint32_t count)
+{
+    file_t* dir = node_dir->vnode_data;
+    fat32_info_t* fs_info = node_dir->vnode_vfs->vfs_data;
+
+    dirEntry_t entry;
+    int readpos = 0;
+    int entries = 0;
+
+    do
+    {
+        readpos = fat32_readdir(fs_info, dir, &entry, readpos);;
+
+        if(readpos)
+        {
+            if(strcmp(entry.name, ".") == 0 || strcmp(entry.name, "..") == 0) continue;   // these are unix compatible directories (doesnt count as entries)
+
+            strncpy(buffer[entries].name, entry.name, 256);
+            buffer[entries].type = entry.type;
+            entries++;
+        }
+    } while (readpos && entries < count);
+    
+
+    return entries;
 }

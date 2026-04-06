@@ -724,31 +724,37 @@ void init_process()
     if(VFS_mount("devfs", NULL, "/dev") == VFS_OK)
         log_info("init_process", "devfs mounted successfully at /dev");
 
-    int disk_fd = VFS_open("/dev/sda0", VFS_O_RDONLY);
-
-    if(disk_fd >= 0)
-    {
-        char buf[512];
-        VFS_read(disk_fd, buf, 1);
-
-        print_buffer("sector of partition: \n", buf, 512);
-    }
-    VFS_close(disk_fd);
-
     // we should make the directory first!
     if(VFS_mount("fat32", lookup_device("sda0"), "/mnt") == VFS_OK)
         log_info("init_process", "fat32 mounted successfully at /mnt");
 
-    disk_fd = VFS_open("/mnt/kernel.bin", VFS_O_RDONLY);
+    if(VFS_mkdir("/mnt/another directory", 0) >= 0)
+        log_debug("init", "successfully created a directory");
 
-    if(disk_fd >= 0)
+    int new_file = VFS_open("/mnt/test/file.txt", VFS_O_RDWR | VFS_O_CREAT | VFS_O_TRUNC);
+
+    if(new_file >= 0)
     {
-        char buf[512];
-        VFS_read(disk_fd, buf, 512);
+        char* buf = "Dans cette phrase je tente d ecrire un texte coherent et fluide.Dans cette phrase je tente d ecrire un texte coherent et fluide.Dans cette phrase je tente d ecrire un texte coherent et fluide.Dans cette phrase je tente d ecrire un texte coherent et fluide.Dans cette phrase je tente d ecrire un texte coherent et fluide.Dans cette phrase je tente d ecrire un texte coherent et fluide.Dans cette phrase je tente d ecrire un texte coherent et fluide.Dans cette phrase je tente d ecrire un texte coherent et fluide.";
+        int written = VFS_write(new_file, buf, 512);
 
-        print_buffer("kernel.bin [512]: \n", buf, 512);
+        log_debug("init", "successfully written: %d", written);
+
+        vfs_stat_t stat;
+        VFS_stat("/mnt/test/file.txt", &stat);
+        log_debug("init", "file type: %d, filesize: %d", stat.type, stat.size);
+
+        char mybuf[64];
+        VFS_seek(new_file, -64, VFS_SEEK_END);
+        int read = VFS_read(new_file, mybuf, 64);
+        log_debug("init", "successfully read: %d", read);
+        log_debug("init", "content: %s", mybuf);
     }
-    VFS_close(disk_fd);
+    VFS_close(new_file);
+
+    struct dirent dir[5];
+    int entries = VFS_getdents("/mnt", dir, 5);
+    for(int i = 0; i < entries; i++) printf("name: %s, type: %d\n", dir[i].name, dir->type);
 
     int fd = VFS_open("/dev/fb", VFS_O_RDONLY);
     

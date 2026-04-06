@@ -44,7 +44,6 @@ static int64_t read(struct vnode* node, void *buffer, size_t size, int64_t offse
 static int64_t write(struct vnode* node, const void *buffer, size_t size, int64_t offset, uint32_t flags);
 static int lookup(struct vnode* node_dir, const char* name, struct vnode** result);
 static int ioctl(struct vnode* node, int command, void* arg);
-int identify(struct vnode* node, uint64_t* fileSize);
 
 // vnode operation !!
 vnodeops_t devfs_vnode_op = {
@@ -52,7 +51,6 @@ vnodeops_t devfs_vnode_op = {
     .write = write,
     .lookup = lookup,
     .ioctl = ioctl,
-    .identify = identify
 };
 
 void devfs_init()
@@ -171,12 +169,4 @@ int ioctl(struct vnode* node, int command, void* arg)
 {
     device_t* dev = (device_t*)node->vnode_data;
     return dev->ioctl(command, arg);
-}
-
-int identify(struct vnode* node, uint64_t* fileSize)
-{
-    if(fileSize)
-        *fileSize = 0;
-
-    return VFS_OK;
 }

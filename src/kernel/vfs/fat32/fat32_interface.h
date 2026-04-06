@@ -128,3 +128,7 @@ int64_t fat32_write(fat32_info_t* filesystem, file_t* this_file, const void* buf
 
 bool fat32_lookup_in_dir(fat32_info_t* filesystem, uint32_t first_cluster, const char* name, fat_dir_entry_t* entryOut, location_t* out);
 int fat32_readdir(fat32_info_t* filesystem, file_t* this_dir, dirEntry_t* out, uint64_t readPos);
+
+bool fat32_make(fat32_info_t* filesystem, file_t* this_dir, const char *name, bool isDirectory);
+int fat32_delete(fat32_info_t* filesystem, file_t* file);
+int fat32_trunc(fat32_info_t* filesystem, file_t* file);

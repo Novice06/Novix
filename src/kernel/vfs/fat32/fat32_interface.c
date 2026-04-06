@@ -129,6 +129,8 @@ uint32_t cluster_to_Lba(fat32_info_t* filesystem, uint32_t cluster)
 
 void free_cluster_chain(fat32_info_t* filesystem, uint32_t cluster)
 {
+    if(!IS_VALID_CLUSTER(cluster)) return;
+
     uint32_t fat_sector = (cluster * 4) / filesystem->bootSector.bytes_per_sector;   // the sector where this cluster is stored
     int clusters_per_sector = filesystem->bootSector.bytes_per_sector / 4;
     uint32_t index_in_sector = cluster % clusters_per_sector;
@@ -795,14 +797,15 @@ int fat32_readdir(fat32_info_t* filesystem, file_t* this_dir, dirEntry_t* out, u
     {
         out->type = (entry.attributes & FAT_ATTR_DIRECTORY) ? DIR_TYPE : FILE_TYPE;
 
-        return readPos + entries_consumed;;
+        return readPos + entries_consumed;
     }
 
     return 0; // EOF
 }
 
-bool fat32_make(fat32_info_t* filesystem, file_t* this_dir, char *name, bool isDirectory)
+bool fat32_make(fat32_info_t* filesystem, file_t* this_dir, const char *name, bool isDirectory)
 {
+    if((this_dir->entry.attributes & FAT_ATTR_DIRECTORY) != FAT_ATTR_DIRECTORY) return false;   // what ?
     if(strlen(name) > 256)  return false; // file name too large !!
     
     fat_dir_entry_t entryOut;
@@ -811,4 +814,68 @@ bool fat32_make(fat32_info_t* filesystem, file_t* this_dir, char *name, bool isD
         return false;   // file or directory already exist
 
     return fat32_make_entry(filesystem, this_dir->entry.firstClusterLow | (this_dir->entry.firstClusterHigh << 16), name, isDirectory ? FAT_ATTR_DIRECTORY : FAT_ATTR_REGULAR);
+}
+
+int fat32_delete(fat32_info_t* filesystem, file_t* file)
+{
+    /*
+    * this function doesnt care if its a file or a directory
+    * if a directory is requested to be detleted this function doesnt delete
+    * the files inside it, it is the responsibility of the higher-level logic to handle that.
+    */
+
+    if(file->isRoot) return -1; // why you would want to do that ??
+
+    free_cluster_chain(filesystem, file->entry.firstClusterLow | (file->entry.firstClusterHigh << 16));
+    if(file->in_parent.has_lfn_entries)
+    {
+        uint32_t lfn_cluster = file->in_parent.lfn_start_cluster;
+        uint32_t lfn_offset = file->in_parent.lfn_offset;
+        uint32_t deleted_entries = 0;
+        while (IS_VALID_CLUSTER(lfn_cluster) && deleted_entries < file->in_parent.lfn_entry_count)
+        {
+            readSectors(filesystem->dev, filesystem->working_buffer, cluster_to_Lba(filesystem, lfn_cluster), filesystem->bootSector.sectors_per_cluster);
+
+            fat_dir_entry_t* current_entry;
+            int EntryCount = (filesystem->bootSector.sectors_per_cluster * filesystem->bootSector.bytes_per_sector) / 32;
+
+            for(; lfn_offset < EntryCount && deleted_entries < file->in_parent.lfn_entry_count; lfn_offset++) // this loop is used to parse the entries
+            {
+                current_entry = (fat_dir_entry_t*)filesystem->working_buffer + lfn_offset;
+                current_entry->filename[0] = 0xE5;  // die !!
+                deleted_entries++;
+            }
+
+            writeSectors(filesystem->dev, filesystem->working_buffer, cluster_to_Lba(filesystem, lfn_cluster), filesystem->bootSector.sectors_per_cluster);  // flush !!
+
+            lfn_cluster = get_next_cluster(filesystem, lfn_cluster);
+            lfn_offset = 0;
+        }
+    }
+
+    file->entry.filename[0] = 0xE5;
+    file->entry.firstClusterHigh = 0;
+    file->entry.firstClusterLow = 0;
+    file->entry.fileSize = 0;
+    fat32_sync_entry(filesystem, file);
+
+    return 0; // success
+}
+
+int fat32_trunc(fat32_info_t* filesystem, file_t* file)
+{
+    if((file->entry.attributes & FAT_ATTR_DIRECTORY) == FAT_ATTR_DIRECTORY)
+    {
+        return -1;   // this is a directory
+    }
+
+    if(file->entry.fileSize == 0) return 0;
+
+    file->entry.fileSize = 0;
+    free_cluster_chain(filesystem, file->entry.firstClusterLow | (file->entry.firstClusterHigh << 16));
+    file->entry.firstClusterHigh = 0;
+    file->entry.firstClusterLow = 0;
+    fat32_sync_entry(filesystem, file);
+
+    return 0;
 }

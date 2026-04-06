@@ -35,7 +35,10 @@ typedef enum
     VFS_O_RDONLY    = 1 << 0,   // read only
     VFS_O_WRONLY    = 1 << 1,   // write only
     VFS_O_RDWR      = 1 << 2,   // read / write
-    VFS_O_NONBLOCK  = 1 << 3,   // non block operation 
+    VFS_O_APPEND    = 1 << 3,   // add at the end of file
+    VFS_O_CREAT     = 1 << 4,   // create if doesnt exist
+    VFS_O_TRUNC     = 1 << 5,   // trunc the file to 0
+    VFS_O_NONBLOCK  = 1 << 15,  // non block operation 
 } vfs_open_mode_t;
 
 typedef enum
@@ -120,6 +123,20 @@ typedef struct vnode
     void *vnode_data;               /* File-system-specific data (usually an inode or similar) */
 }vnode_t;
 
+typedef struct vfs_stat {
+    vtype type;
+    uint64_t size;
+    uint16_t permissions;
+    uint64_t created;
+    uint64_t modified;
+    uint64_t accessed;
+} vfs_stat_t;
+
+struct dirent {
+    uint8_t type; // file / dir
+    char name[256];
+};
+
 /*
  * Defines the operations that can be performed on a vnode.
  * These must be implemented by each file system.
@@ -129,10 +146,13 @@ typedef struct vnodeops
     int64_t (*read)(struct vnode* node, void *buffer, size_t size, int64_t offset, uint32_t flags);
     int64_t (*write)(struct vnode* node, const void *buffer, size_t size, int64_t offset, uint32_t flags);
     int (*ioctl)(struct vnode* node, const int command, void* arg);
-    int (*identify)(struct vnode* node, uint64_t* fileSize); // doesnt fill if NULL is passed
+    int (*trunc)(struct vnode* node);
 
-    /* Find a file/directory by name */
-    int (*lookup)(struct vnode* node_dir, const char* name, struct vnode** result);
+    int (*lookup)(struct vnode* node_dir, const char* name, struct vnode** result); /* Find a file/directory by name */
+    int (*create)(struct vnode* node_dir, const char* name, vtype type);
+    int (*remove)(struct vnode* node);
+    int (*readdir)(struct vnode* node_dir, struct dirent* buffer, uint32_t count);
+    int (*stat)(struct vnode* node, vfs_stat_t* stat);
 }vnodeops_t;
 
 
@@ -168,6 +188,9 @@ int64_t VFS_read(int fd, void *buffer, size_t size);
 int64_t VFS_write(int fd, const void *buffer, size_t size);
 
 int VFS_ioctl(int fd, int command, void* arg);
-int VFS_identify(int fd, uint64_t* fileSize);
-size_t VFS_seek(int fd, size_t offset, int whence);
+size_t VFS_seek(int fd, int64_t offset, int whence);
 int VFS_mkdir(const char* path, uint16_t mode);
+int VFS_rmdir(const char* path);
+int VFS_unlink(const char* path);
+int VFS_stat(const char* path, vfs_stat_t* stat);
+int VFS_getdents(const char* path, struct dirent* entries, uint32_t count);

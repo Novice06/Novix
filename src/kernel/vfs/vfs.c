@@ -254,7 +254,42 @@ int VFS_mount(const char *fs_name, device_t* dev, const char *mount_point)
 	vnode_t* file_node = lookup_path_name(path);
 
 	if(file_node == NULL)
-		return VFS_ENOENT;
+	{
+		if((mode & VFS_O_CREAT) != VFS_O_CREAT) return VFS_ENOENT;
+
+		char name[257];
+		char* parsed_path = kmalloc(sizeof(char) * (strlen(path) + 1));
+		strcpy(parsed_path, path);
+
+		for(int i = strlen(path) - 1; i >= 0; i--)
+		{
+			if(parsed_path[i] == '/')
+			{
+				if(strlen(parsed_path + i + 1) > 256)
+				{
+					kfree(parsed_path);
+					return VFS_ERROR; // file name too large !!
+				}
+
+				strcpy(name, parsed_path + i + 1);
+				parsed_path[i+1] = '\0';
+				break;
+			}
+		}
+
+		vnode_t* parent = lookup_path_name(parsed_path);
+		if(!parent)
+		{
+			kfree(parsed_path);
+			return VFS_ENOENT;
+		}
+
+		parent->vnode_op->create(parent, name, VREG);
+		kfree(parsed_path);
+
+		file_node = lookup_path_name(path);	// retry
+		if(!file_node)	return VFS_ERROR;
+	}
 
 	if(file_node->vnode_type != VREG)
 		return VFS_EISDIR;
@@ -268,6 +303,9 @@ int VFS_mount(const char *fs_name, device_t* dev, const char *mount_point)
 	PROCESS_getCurrent()->resources[descriptor].mode = mode;
 	PROCESS_getCurrent()->resources[descriptor].position = 0;
 	PROCESS_getCurrent()->resources[descriptor].vnode = file_node;
+
+	if((mode & VFS_O_TRUNC) == VFS_O_TRUNC) file_node->vnode_op->trunc(file_node);
+	if((mode & VFS_O_APPEND) == VFS_O_APPEND)	VFS_seek(descriptor, 0, VFS_SEEK_END);
 
 	return descriptor;
  }
@@ -291,7 +329,7 @@ int64_t VFS_read(int fd, void *buffer, size_t size)
 	if(!(PROCESS_getCurrent()->resources[fd].mode & VFS_O_RDONLY) && !(PROCESS_getCurrent()->resources[fd].mode & VFS_O_RDWR))
 		return VFS_EACCESS;
 
-	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->read(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position, PROCESS_getCurrent()->resources[fd].mode & 0xFFFFFFF8);
+	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->read(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position, PROCESS_getCurrent()->resources[fd].mode);
 
 	if(ret < 0)	// it's an error
 		return ret;
@@ -325,7 +363,7 @@ int64_t VFS_write(int fd, const void *buffer, size_t size)
 	if(!(PROCESS_getCurrent()->resources[fd].mode & VFS_O_WRONLY) && !(PROCESS_getCurrent()->resources[fd].mode & VFS_O_RDWR))
 		return VFS_EACCESS;
 
-	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->write(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position, PROCESS_getCurrent()->resources[fd].mode & 0x7);
+	int ret = PROCESS_getCurrent()->resources[fd].vnode->vnode_op->write(PROCESS_getCurrent()->resources[fd].vnode, buffer, size, PROCESS_getCurrent()->resources[fd].position, PROCESS_getCurrent()->resources[fd].mode);
 	
 	if(ret < 0)	// it's an error
 		return ret;
@@ -343,15 +381,7 @@ int VFS_ioctl(int fd, int command, void* arg)
 	return PROCESS_getCurrent()->resources[fd].vnode->vnode_op->ioctl(PROCESS_getCurrent()->resources[fd].vnode, command, arg);
 }
 
-int VFS_identify(int fd, uint64_t* fileSize)
-{
-	if(!is_fd_valid(fd))
-		return VFS_EBADF;
-
-	return PROCESS_getCurrent()->resources[fd].vnode->vnode_op->identify(PROCESS_getCurrent()->resources[fd].vnode, fileSize);
-}
-
-size_t VFS_seek(int fd, size_t offset, int whence)
+size_t VFS_seek(int fd, int64_t offset, int whence)
 {
 	if(!is_fd_valid(fd))
 		return VFS_EBADF;
@@ -368,8 +398,9 @@ size_t VFS_seek(int fd, size_t offset, int whence)
 
 	case VFS_SEEK_END:
 		uint64_t file_size;
-		VFS_identify(fd, &file_size);
-		PROCESS_getCurrent()->resources[fd].position = file_size + offset;
+		vfs_stat_t info;
+		PROCESS_getCurrent()->resources[fd].vnode->vnode_op->stat(PROCESS_getCurrent()->resources[fd].vnode, &info);
+		PROCESS_getCurrent()->resources[fd].position = info.size + offset;
 		break;
 	
 	default:
@@ -381,8 +412,85 @@ size_t VFS_seek(int fd, size_t offset, int whence)
 
 int VFS_mkdir(const char* path, uint16_t mode)
 {
-	printf("Trop la fleme d'implementer ca !\n");
-	return VFS_ERROR;
+	if(lookup_path_name(path)) return VFS_EEXIST;	// already exists
+
+	char name[257];
+    char* parsed_path = kmalloc(sizeof(char) * (strlen(path) + 1));
+    strcpy(parsed_path, path);
+
+    for(int i = strlen(path) - 1; i >= 0; i--)
+    {
+        if(parsed_path[i] == '/')
+        {
+            if(strlen(parsed_path + i + 1) > 256)
+			{
+				kfree(parsed_path);
+				return VFS_ERROR; // file name too large !!
+			}
+
+            strcpy(name, parsed_path + i + 1);
+            parsed_path[i+1] = '\0';
+            break;
+        }
+    }
+
+	vnode_t* parent = lookup_path_name(parsed_path);
+	if(!parent)
+	{
+		kfree(parsed_path);
+		return VFS_ENOENT;
+	}
+
+	int ret = parent->vnode_op->create(parent, name, VDIR);
+	kfree(parsed_path);
+
+	return ret;
+}
+
+int VFS_rmdir(const char* path)
+{
+	vnode_t* dir = lookup_path_name(path);
+	if(!dir)	return VFS_ENOENT;
+	if(dir->vnode_type != VDIR) return VFS_ENOTDIR;
+
+	struct dirent buff = {
+		.name = {0},
+		.type = 0,
+	};
+	dir->vnode_op->readdir(dir, &buff, 1);
+	if(buff.name[0])	return VFS_ERROR;	// directory not empty
+
+	if(dir->ref_count)	return VFS_EAGAIN;	// in use !!
+
+	return dir->vnode_op->remove(dir);
+}
+
+int VFS_unlink(const char* path)
+{
+	vnode_t* file = lookup_path_name(path);
+	if(!file)	return VFS_ENOENT;
+	if(file->vnode_type == VDIR) return VFS_EISDIR;
+
+	if(file->ref_count) return VFS_EAGAIN;
+
+	return file->vnode_op->remove(file);
+}
+
+int VFS_stat(const char* path, vfs_stat_t* stat)
+{
+	vnode_t* node = lookup_path_name(path);
+	if(!node) return VFS_ENOENT;
+
+	return node->vnode_op->stat(node, stat);
+}
+
+int VFS_getdents(const char* path, struct dirent* entries, uint32_t count)
+{
+	vnode_t* dir = lookup_path_name(path);
+	if(!dir)	return VFS_ENOENT;
+	if(dir->vnode_type != VDIR) return VFS_ENOTDIR;
+
+	return dir->vnode_op->readdir(dir, entries, count);
 }
 
 void VFS_register_new_filesystem(filesystem_t* fs)
