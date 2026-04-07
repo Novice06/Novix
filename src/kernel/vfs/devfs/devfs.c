@@ -19,6 +19,7 @@
 
 #include <debug.h>
 #include <string.h>
+#include <memory.h>
 #include <mem_manager/heap.h>
 #include <vfs/vfs.h>
 #include <drivers/device.h>
@@ -44,6 +45,11 @@ static int64_t read(struct vnode* node, void *buffer, size_t size, int64_t offse
 static int64_t write(struct vnode* node, const void *buffer, size_t size, int64_t offset, uint32_t flags);
 static int lookup(struct vnode* node_dir, const char* name, struct vnode** result);
 static int ioctl(struct vnode* node, int command, void* arg);
+static int trunc(struct vnode* node);
+static int create(struct vnode* node_dir, const char* name, vtype type);
+static int remove(struct vnode* node);
+static int readdir(struct vnode* node_dir, struct dirent* buffer, uint32_t count);
+static int stat(struct vnode* node, vfs_stat_t* stat);
 
 // vnode operation !!
 vnodeops_t devfs_vnode_op = {
@@ -51,6 +57,11 @@ vnodeops_t devfs_vnode_op = {
     .write = write,
     .lookup = lookup,
     .ioctl = ioctl,
+    .trunc = trunc,
+    .create = create,
+    .remove = remove,
+    .readdir = readdir,
+    .stat = stat,
 };
 
 void devfs_init()
@@ -169,4 +180,40 @@ int ioctl(struct vnode* node, int command, void* arg)
 {
     device_t* dev = (device_t*)node->vnode_data;
     return dev->ioctl(command, arg);
+}
+
+int trunc(struct vnode* node)
+{
+    return VFS_ERROR;
+}
+
+int create(struct vnode* node_dir, const char* name, vtype type)
+{
+    return VFS_ERROR;
+}
+
+int remove(struct vnode* node)
+{
+    return VFS_ERROR;
+}
+
+int readdir(struct vnode* node_dir, struct dirent* buffer, uint32_t count)
+{
+    char* list = kmalloc(MAX_NAME_LENGTH * count);
+
+    int dev_count = get_device_list(list, count);
+
+    for(int i = 0; i < dev_count; i++)
+    {
+        strncpy(buffer[i].name, list + (i * MAX_NAME_LENGTH), MAX_NAME_LENGTH);
+        buffer[i].type = 0;
+    }
+
+    return dev_count;
+}
+
+int stat(struct vnode* node, vfs_stat_t* stat)
+{
+    memset(stat, 0, sizeof(vfs_stat_t));
+    return VFS_OK;
 }

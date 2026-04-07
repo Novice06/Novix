@@ -157,6 +157,26 @@ void SYSCALL_mkdir(Registers* regs)
     regs->edx = VFS_mkdir((char*)regs->esi, regs->ebx);
 }
 
+void SYSCALL_rmdir(Registers* regs)
+{
+    regs->edx = VFS_rmdir((char*)regs->esi);
+}
+
+void SYSCALL_unlink(Registers* regs)
+{
+    regs->edx = VFS_unlink((char*)regs->esi);
+}
+
+void SYSCALL_stat(Registers* regs)
+{
+    regs->edx = VFS_stat((char*)regs->esi, (vfs_stat_t*)regs->edi);
+}
+
+void SYSCALL_getdents(Registers* regs)
+{
+    regs->edx = VFS_getdents((char*)regs->esi, (struct dirent*)regs->edi, regs->ebx);
+}
+
 void SYSCALL_keyeventToAscii(Registers* regs)
 {
     regs->ebx = KEYBOARD_scanToAscii((void*)regs->esi);
@@ -183,6 +203,10 @@ SyscallHandler Handlers[] = {
     [17]    = SYSCALL_ioctl,
     [18]    = SYSCALL_seek,
     [19]    = SYSCALL_mkdir,
+    [20]    = SYSCALL_rmdir,
+    [21]    = SYSCALL_unlink,
+    [22]    = SYSCALL_stat,
+    [23]    = SYSCALL_getdents,
 };
 
 void SYSCALL_handler(Registers* regs)

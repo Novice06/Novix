@@ -55,3 +55,20 @@ device_t* lookup_device(const char* name)
     release_mutex(dev_lock);
     return NULL;
 }
+
+int get_device_list(char* buff, uint32_t count)
+{
+    uint32_t i;
+
+    acquire_mutex(dev_lock);
+
+    for(i = 0; i < devices->count && i < count; i++)
+    {
+        device_t* dev = (device_t*)list_getAt(devices, i);
+        strncpy(buff + (i * MAX_NAME_LENGTH), dev->name, MAX_NAME_LENGTH);
+    }
+
+    release_mutex(dev_lock);
+    
+    return i;
+}

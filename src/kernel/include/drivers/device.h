@@ -39,3 +39,4 @@ typedef struct device
 void init_device_manager();
 void add_device(device_t* dev);
 device_t* lookup_device(const char* name);
+int get_device_list(char* buff, uint32_t count);
