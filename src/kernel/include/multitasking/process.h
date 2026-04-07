@@ -47,6 +47,7 @@ typedef struct process
     bool usermode;  // usermode or kernel process 
     uint32_t id;
     void* entryPoint;
+    void* brk;
 
     file_descriptor_t resources[MAX_OPEN_FILES];
     vm_region_t* regions;
@@ -61,6 +62,8 @@ void __attribute__((cdecl)) switch_to_usermode(uint32_t stack, uint32_t ip);
 void PROCESS_initialize(process_t* idle);
 void PROCESS_createFrom(void* entryPoint);
 void PROCESS_createFromByteArray(void* array, int length, bool is_usermode);
+int PROCESS_execve(const char *path, char *const argv[]);
+void* PROCESS_sbrk(intptr_t size);
 void PROCESS_terminate();
 
 void* PROCESS_createNewRegion(region_type_t type, uint32_t length, uint64_t shm_id);

@@ -177,6 +177,18 @@ void SYSCALL_getdents(Registers* regs)
     regs->edx = VFS_getdents((char*)regs->esi, (struct dirent*)regs->edi, regs->ebx);
 }
 
+void SYSCALL_execve(Registers* regs)
+{
+    regs->edx = PROCESS_execve((char*)regs->esi, (char*)regs->ebx);
+}
+
+void SYSCALL_sbrk(Registers* regs)
+{
+    intptr_t size = regs->edx;
+    size = (size << 32) | regs->ecx;
+    regs->esi = PROCESS_sbrk(size);
+}
+
 void SYSCALL_keyeventToAscii(Registers* regs)
 {
     regs->ebx = KEYBOARD_scanToAscii((void*)regs->esi);
@@ -207,6 +219,8 @@ SyscallHandler Handlers[] = {
     [21]    = SYSCALL_unlink,
     [22]    = SYSCALL_stat,
     [23]    = SYSCALL_getdents,
+    [24]    = SYSCALL_execve,
+    [25]    = SYSCALL_sbrk,
 };
 
 void SYSCALL_handler(Registers* regs)

@@ -257,11 +257,12 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
         heap->start = code->start + (code->length * 0x1000);
         heap->length = roundUp_div(0x20000000, 0x1000);   // 512 Mo for the heap
         heap->type = REGION_HEAP;
+        proc->brk = (void*)heap->start;
 
         vm_region_t* stack = kmalloc(sizeof(vm_region_t));
         stack->start = 0xBFF00000;
         stack->length = roundUp_div(0x100000, 0x1000);   // 1 Mo for the stack
-        stack->type = REGION_HEAP;
+        stack->type = REGION_STACK;
 
 
         code->next = heap;
@@ -297,6 +298,109 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     unlock_scheduler();
 
     add_READY_process(proc, false);
+}
+
+int PROCESS_execve(const char *path, char *const argv[])
+{
+    int file = VFS_open(path, VFS_O_RDONLY);
+    if(file < 0) return -1;
+
+    vfs_stat_t stat;
+    VFS_stat(path, &stat);
+
+    process_t* proc = kmalloc(sizeof(process_t));
+
+    proc->esp0 = vmalloc(1);
+    proc->esp = proc->esp0 + 0x1000 - 4;
+
+    *(uint32_t*)proc->esp = (uint32_t)spawnProcess; // return address after task_switch
+
+    proc->esp -= (4 * 5);   // pushed register
+    *(uint32_t*)proc->esp = 0x202;       // default eflags for the new process
+    //proc->esp -= (4 * 4);   // pushed register
+
+    proc->virt_cr3 = VIRTMEM_createAddressSpace();
+    proc->cr3 = VIRTMEM_getPhysAddr(proc->virt_cr3);    // store the physical address of the new pdbr
+
+    proc->usermode = true;
+    proc->entryPoint = (void*)0x400000;
+
+    proc->id = id_dispatcher(proc); // WARNING: should check if there is more room for this process
+    memset(proc->resources, 0, sizeof(file_descriptor_t) * MAX_OPEN_FILES);
+    proc->regions = NULL;
+
+    proc->next = NULL;
+
+
+    // TODO: find a way to pass argv and argc (this action must be performed before switching pdbr because argv is a userpace pointer)
+    // int argc = 0;
+    // for(int i = 0; argv[i] != NULL; i++) argc++;
+
+
+    // because we want to write the new program's address space we need to switch pdbr
+    lock_scheduler();
+
+    void* currentpdbr = PROCESS_getCurrent()->cr3;
+    PROCESS_getCurrent()->cr3 = proc->cr3;   // we're updating the current process in case a context switch occurs while reading the file
+    switchPDBR(proc->cr3);
+
+    unlock_scheduler();
+
+    
+    VIRTMEM_mapPage((void*)(0xc0000000 - 4), false); // we need to map the stack for this process (4kb before 0xc0000000)
+
+    vm_region_t* code = kmalloc(sizeof(vm_region_t));
+    code->start = 0x400000;
+    code->length = roundUp_div(stat.size, 0x1000); // page size
+    code->type = REGION_CODE;
+
+    vm_region_t* heap = kmalloc(sizeof(vm_region_t));
+    heap->start = code->start + (code->length * 0x1000);
+    heap->length = roundUp_div(0x20000000, 0x1000);   // 512 Mo for the heap
+    heap->type = REGION_HEAP;
+    proc->brk = (void*)heap->start;
+
+    vm_region_t* stack = kmalloc(sizeof(vm_region_t));
+    stack->start = 0xBFF00000;
+    stack->length = roundUp_div(0x100000, 0x1000);   // 1 Mo for the stack
+    stack->type = REGION_STACK;
+
+
+    code->next = heap;
+    heap->next = stack;
+    stack->next = NULL;
+
+    proc->regions = code;
+
+
+    void* buffer = proc->entryPoint;
+    for(int i = 0; i < roundUp_div(stat.size, 0x1000); i++)
+        VIRTMEM_mapPage(buffer + (i * 0x1000), false);
+
+    VFS_read(file, buffer, stat.size);
+
+    // restoring pdbr
+    lock_scheduler();
+
+    PROCESS_getCurrent()->cr3 = currentpdbr;
+    switchPDBR(PROCESS_getCurrent()->cr3);
+
+    unlock_scheduler();
+
+    add_READY_process(proc, false);
+}
+
+void* PROCESS_sbrk(intptr_t size)
+{
+    vm_region_t* heap = PROCESS_getCurrent()->regions->next;    // because the heap is right next to the code region there is no need to search for it manuelly
+
+    if((PROCESS_getCurrent()->brk + size) > (heap->start + heap->length))
+        return PROCESS_getCurrent()->brk;   // failed
+
+    PROCESS_getCurrent()->brk += size;
+    VIRTMEM_mapPage(PROCESS_getCurrent()->brk, !PROCESS_getCurrent()->usermode);
+
+    return PROCESS_getCurrent()->brk;
 }
 
 void* PROCESS_createNewRegion(region_type_t type, uint32_t length, uint64_t shm_id)
