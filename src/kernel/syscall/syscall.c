@@ -184,9 +184,7 @@ void SYSCALL_execve(Registers* regs)
 
 void SYSCALL_sbrk(Registers* regs)
 {
-    intptr_t size = regs->edx;
-    size = (size << 32) | regs->ecx;
-    regs->esi = PROCESS_sbrk(size);
+    regs->esi = (uint32_t)PROCESS_sbrk(regs->ebx);
 }
 
 void SYSCALL_keyeventToAscii(Registers* regs)

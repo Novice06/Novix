@@ -62,7 +62,7 @@ void __attribute__((cdecl)) switch_to_usermode(uint32_t stack, uint32_t ip);
 void PROCESS_initialize(process_t* idle);
 void PROCESS_createFrom(void* entryPoint);
 void PROCESS_createFromByteArray(void* array, int length, bool is_usermode);
-int PROCESS_execve(const char *path, char *const argv[]);
+int PROCESS_execve(const char *path, char* argv);
 void* PROCESS_sbrk(intptr_t size);
 void PROCESS_terminate();
 

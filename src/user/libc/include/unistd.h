@@ -9,7 +9,7 @@
 ssize_t read(int fd, void *buf, size_t n);
 ssize_t write(int fd, const void *buf, size_t n);
 
-off_t lseek(int fd, size_t offset, int whence);
+off_t lseek(int fd, off_t offset, int whence);
 
 // filesystem
 int chdir (const char *path);

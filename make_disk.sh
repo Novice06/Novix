@@ -59,6 +59,7 @@ echo "Copying files to ${TARGET_PARTITION} (mounted on ${BUILD_DIR}/tmp)..."
 mkdir -p ${BUILD_DIR}/tmp
 mount ${TARGET_PARTITION} ${BUILD_DIR}/tmp
 cp ${BUILD_DIR}/kernel.bin ${BUILD_DIR}/tmp
+cp -r ${BUILD_DIR}/user/* ${BUILD_DIR}/tmp
 mkdir ${BUILD_DIR}/tmp/test
 umount ${BUILD_DIR}/tmp
 

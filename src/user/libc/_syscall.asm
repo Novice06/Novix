@@ -148,8 +148,7 @@ __sys_sbrk:
     push edi
 
     mov eax, 25
-    mov ecx, [ebp + 8]     ; low size
-    mov edx, [ebp + 12]     ; high size
+    mov ebx, [ebp + 8]     ; size
     int 0x80
 
     mov eax, esi

@@ -39,11 +39,11 @@ FILE *fopen(const char *path, const char *mode)
         flags  = plus ? O_RDWR : O_RDONLY;
         fflags = plus ? (_FILE_READ | _FILE_WRITE) : _FILE_READ;
     } else if (m == 'w') {
-        flags  = plus ? (O_RDWR | O_CREAT) : (O_WRONLY | O_CREAT);
+        flags  = plus ? (O_TRUNC | O_RDWR | O_CREAT) : (O_TRUNC | O_WRONLY | O_CREAT);
         fflags = plus ? (_FILE_READ | _FILE_WRITE) : _FILE_WRITE;
     } else if (m == 'a') {
-        flags  = O_WRONLY | O_CREAT;
-        fflags = _FILE_WRITE;
+        flags  = plus ? (O_APPEND | O_RDWR | O_CREAT) : (O_APPEND | O_WRONLY | O_CREAT);
+        fflags = plus ? (_FILE_READ | _FILE_WRITE) : _FILE_WRITE;
     } else {
         errno = EINVAL;
         return NULL;

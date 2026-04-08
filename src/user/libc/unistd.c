@@ -15,7 +15,7 @@ pid_t getpid(void) {
     return (pid_t)__sys_getpid();
 }
 
-off_t lseek(int fd, size_t offset, int whence) {
+off_t lseek(int fd, off_t offset, int whence) {
     return __sys_seek(fd, offset, whence);
 }
 

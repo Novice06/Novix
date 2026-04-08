@@ -351,7 +351,7 @@ int64_t VFS_write(int fd, const void *buffer, size_t size)
 
     case VFS_FD_DEBUG:
         for (size_t i = 0; i < size; i++)
-			E9_putc((*(uint8_t*)buffer+i));
+			E9_putc(*((uint8_t*)buffer+i));
         return size;
     }
 

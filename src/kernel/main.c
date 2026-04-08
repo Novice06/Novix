@@ -118,6 +118,8 @@ void init_process()
 
     SYSCALL_initialize();
 
+    PROCESS_execve("/prog/foo.bin", NULL);
+
     PROCESS_terminate();
 }
 

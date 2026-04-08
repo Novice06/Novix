@@ -300,7 +300,7 @@ void PROCESS_createFromByteArray(void* array, int length, bool is_usermode)
     add_READY_process(proc, false);
 }
 
-int PROCESS_execve(const char *path, char *const argv[])
+int PROCESS_execve(const char *path, char* argv)
 {
     int file = VFS_open(path, VFS_O_RDONLY);
     if(file < 0) return -1;
@@ -347,7 +347,8 @@ int PROCESS_execve(const char *path, char *const argv[])
     unlock_scheduler();
 
     
-    VIRTMEM_mapPage((void*)(0xc0000000 - 4), false); // we need to map the stack for this process (4kb before 0xc0000000)
+    for (int i = 0; i < 32; i++) // alloc 128 KB for the stack!
+        VIRTMEM_mapPage((void*)(0xc0000000 - (i+1)*0x1000), false);
 
     vm_region_t* code = kmalloc(sizeof(vm_region_t));
     code->start = 0x400000;
@@ -388,13 +389,14 @@ int PROCESS_execve(const char *path, char *const argv[])
     unlock_scheduler();
 
     add_READY_process(proc, false);
+    return proc->id;
 }
 
 void* PROCESS_sbrk(intptr_t size)
 {
     vm_region_t* heap = PROCESS_getCurrent()->regions->next;    // because the heap is right next to the code region there is no need to search for it manuelly
 
-    if((PROCESS_getCurrent()->brk + size) > (heap->start + heap->length))
+    if((uint32_t)(PROCESS_getCurrent()->brk + size) > (heap->start + heap->length))
         return PROCESS_getCurrent()->brk;   // failed
 
     PROCESS_getCurrent()->brk += size;

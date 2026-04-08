@@ -3,10 +3,10 @@
 #include <stdint.h>
 
 int __sys_open(const char* path, uint16_t mode);
-int64_t __sys_read(int fd, char* buffer, size_t size);
-int64_t __sys_write(int fd, const char* buffer, size_t size);
+int64_t __sys_read(int fd, char* buffer, uint64_t size);
+int64_t __sys_write(int fd, const char* buffer, uint64_t size);
 int __sys_close(int fd);
-size_t __sys_seek(int fd, size_t offset, int whence);
+size_t __sys_seek(int fd, int64_t offset, int whence);
 int __sys_ioctl(int fd, int command, void* arg);
 int __sys_mkdir(const char* path, int mode);
 int __sys_rmdir(const char* path);

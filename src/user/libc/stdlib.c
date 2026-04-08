@@ -14,7 +14,7 @@ void *malloc(size_t n) {
     if (!_heap) _heap = (char *)__sys_sbrk(0);
     n = (n + 15) & ~(size_t)15; // align 16
     char *p = _heap, *end = _heap + n;
-    if ((char *)__sys_sbrk((long)end) < end) { errno = ENOMEM; return NULL; }
+    if ((char *)__sys_sbrk(n) < end) { errno = ENOMEM; return NULL; }
     _heap = end;
     return p;
 }

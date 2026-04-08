@@ -1,5 +1,5 @@
-CC  = /home/novice/opt/cross/bin/i686-elf-gcc
-AR  = /home/novice/opt/cross/bin/i686-elf-ar
+CC  ?= /home/novice/opt/cross/bin/i686-elf-gcc
+AR  ?= /home/novice/opt/cross/bin/i686-elf-ar
 BLD = build
 
 CFLAGS := -ffreestanding -nostdlib -g -I include
