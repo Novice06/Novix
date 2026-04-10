@@ -54,7 +54,7 @@ typedef struct video_info
     uint32_t framebuffer;		    // physical address of the linear frame buffer; write here to draw to the screen
 	uint32_t off_screen_mem_off;
 	uint16_t off_screen_mem_size;	// size of memory in the framebuffer but not being displayed on the screen
-}video_info_t;
+}__attribute__((packed)) video_info_t;
 
 
 typedef struct{

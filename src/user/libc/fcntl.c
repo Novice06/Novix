@@ -1,6 +1,6 @@
 #include <fcntl.h>
 #include <errno.h>
-#include "_syscall.h"
+#include <_syscall.h>
 
 int open(const char *path, int flags, ...)
 {

@@ -105,20 +105,10 @@ void init_process()
     int entries = VFS_getdents("/dev", dir, 5);
     for(int i = 0; i < entries; i++) printf("name: %s, type: %d\n", dir[i].name, dir[i].type);
 
-    int fd = VFS_open("/dev/fb", VFS_O_RDONLY);
-    
-    surface_t rect = {
-        .height = vidInfo.height,
-        .x = 0,
-        .y = 0,
-        .pixels = (void*)0xc0000000,
-        .width = vidInfo.width,
-    };
-    VFS_ioctl(fd, FB_BLIT_RECT, &rect);
-
     SYSCALL_initialize();
 
-    PROCESS_execve("/prog/foo.bin", NULL);
+    // PROCESS_execve("/prog/foo.bin", NULL);
+    PROCESS_execve("/doom/doomgeneric.bin", NULL);
 
     PROCESS_terminate();
 }

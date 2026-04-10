@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include "_syscall.h"
+#include <_syscall.h>
 
 // entry written by __sys_getdents
 typedef struct {

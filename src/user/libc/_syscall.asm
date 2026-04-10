@@ -1,5 +1,29 @@
 [bits 32]
 
+global __sys_sleep
+__sys_sleep:
+    ; make new call frame
+    push ebp             ; save old call frame
+    mov ebp, esp         ; initialize new call frame
+    
+    ; calle-save
+    push ebx
+    push esi
+    push edi
+
+    mov eax, 2
+    mov ebx, [ebp+8]
+    int 0x80
+
+    pop edi
+    pop esi
+    pop ebx
+
+    ; restore old call frame
+    mov esp, ebp
+    pop ebp
+    ret
+
 global __sys_open
 __sys_open:
     ; make new call frame

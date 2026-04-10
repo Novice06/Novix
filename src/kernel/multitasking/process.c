@@ -396,12 +396,20 @@ void* PROCESS_sbrk(intptr_t size)
 {
     vm_region_t* heap = PROCESS_getCurrent()->regions->next;    // because the heap is right next to the code region there is no need to search for it manuelly
 
-    if((uint32_t)(PROCESS_getCurrent()->brk + size) > (heap->start + heap->length))
+    if((uint32_t)(PROCESS_getCurrent()->brk + size) > (heap->start + (heap->length * 0x1000)))
+    {
+        log_err("brk", "requested: 0x%x, available: 0x%x, check type: %d", (PROCESS_getCurrent()->brk + size), (heap->start + heap->length), heap->type);
         return PROCESS_getCurrent()->brk;   // failed
+    }
+
+    // uint32_t current_page = (uint32_t)PROCESS_getCurrent()->brk & 0xFFFFFFF8;
+    // uint32_t end_page = ((uint32_t)PROCESS_getCurrent()->brk + size) & 0xFFFFFFF8;
+    uint32_t current_page = (uint32_t)PROCESS_getCurrent()->brk & ~(0x1000 - 1);
+    uint32_t end_page = ((uint32_t)PROCESS_getCurrent()->brk + size) & ~(0x1000 - 1);
+    for(; current_page <= end_page; current_page+=0x1000)
+        VIRTMEM_mapPage((void*)current_page, !PROCESS_getCurrent()->usermode);
 
     PROCESS_getCurrent()->brk += size;
-    VIRTMEM_mapPage(PROCESS_getCurrent()->brk, !PROCESS_getCurrent()->usermode);
-
     return PROCESS_getCurrent()->brk;
 }
 

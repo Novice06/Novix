@@ -32,6 +32,6 @@ typedef struct surface
     uint16_t width;
     uint16_t height;
     void* pixels;
-}surface_t;
+}__attribute__((packed)) surface_t;
 
 void FRAMEBUFFER_init(video_info_t* boot_info);

@@ -209,14 +209,28 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list ap)
         p++;
         if (!*p) break;
 
-        // width and zero-pad
+        // --- Bloc de parsing des flags et de la largeur ---
         char pad    = ' ';
         int  width  = 0;
         int  is_long = 0;
 
-        if (*p == '0') { pad = '0'; p++; }
-        while (*p >= '1' && *p <= '9') { width = width * 10 + (*p - '0'); p++; }
-        if (*p == 'l') { is_long = 1; p++; }
+        // DOOM utilise souvent '0' ou '.' pour le padding des textures/fonts
+        if (*p == '0' || *p == '.') {
+            pad = '0';
+            p++;
+        }
+
+        // Lecture de la largeur (ex: le '3' dans %03d)
+        while (*p >= '0' && *p <= '9') {
+            width = width * 10 + (*p - '0');
+            p++;
+        }
+
+        // Gestion du modificateur de longueur (ex: %ld)
+        if (*p == 'l') {
+            is_long = 1;
+            p++;
+        }
 
         switch (*p) {
             case 's': {
@@ -225,31 +239,32 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list ap)
                 while (*s) _EMIT(*s++);
                 break;
             }
+            case 'i': // DOOM adore %i
             case 'd': {
                 long val = is_long ? va_arg(ap, long) : (long)va_arg(ap, int);
-                if (val < 0) { _EMIT('-'); val = -val; }
+                if (val < 0) { 
+                    _EMIT('-'); 
+                    val = -val; 
+                }
                 tlen = _uitoa((unsigned long)val, 10, tmp);
+                
+                // On ajoute le padding AVANT le nombre
                 for (int i = tlen; i < width; i++) _EMIT(pad);
                 for (int i = 0; i < tlen; i++) _EMIT(tmp[i]);
-                tlen = 0;
                 break;
             }
             case 'u': {
-                unsigned long val = is_long ? va_arg(ap, unsigned long)
-                                            : (unsigned long)va_arg(ap, unsigned int);
+                unsigned long val = is_long ? va_arg(ap, unsigned long) : (unsigned long)va_arg(ap, unsigned int);
                 tlen = _uitoa(val, 10, tmp);
                 for (int i = tlen; i < width; i++) _EMIT(pad);
                 for (int i = 0; i < tlen; i++) _EMIT(tmp[i]);
-                tlen = 0;
                 break;
             }
             case 'x': {
-                unsigned long val = is_long ? va_arg(ap, unsigned long)
-                                            : (unsigned long)va_arg(ap, unsigned int);
+                unsigned long val = is_long ? va_arg(ap, unsigned long) : (unsigned long)va_arg(ap, unsigned int);
                 tlen = _uitoa(val, 16, tmp);
                 for (int i = tlen; i < width; i++) _EMIT(pad);
                 for (int i = 0; i < tlen; i++) _EMIT(tmp[i]);
-                tlen = 0;
                 break;
             }
             case 'p': {
@@ -257,7 +272,6 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list ap)
                 _EMIT('0'); _EMIT('x');
                 tlen = _uitoa(val, 16, tmp);
                 for (int i = 0; i < tlen; i++) _EMIT(tmp[i]);
-                tlen = 0;
                 break;
             }
             case 'c': {
@@ -269,8 +283,8 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list ap)
                 break;
             }
             default: {
+                // Si on ne connaît pas, on affiche tel quel pour débugger
                 _EMIT('%');
-                if (is_long) _EMIT('l');
                 _EMIT(*p);
                 break;
             }

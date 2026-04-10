@@ -134,13 +134,15 @@ vnode_t* lookup_path_name(const char* path)
 	char* name;
     char* next_name;
 
-	if(path == NULL || path[0] != '/')
+	if(path == NULL)
 		return NULL;
 
-	strcpy(parsed_path, path);
+	if(path[0] == '/') strcpy(parsed_path, path+1); // ignore the first '/'
+	else if(path[0] == '.' && path[0] != '/') strcpy(parsed_path, path+2); // same here
+	else strcpy(parsed_path, path);
 
 	vfs_root->vfs_op->get_root(vfs_root, &node_out);
-	name = parsed_path + 1;   // ignore the first '/'
+	name = parsed_path;   
     next_name = name;
 
 	while(node_out != NULL && *name != '\0')

@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <ctype.h>
-#include "_syscall.h"
+#include <_syscall.h>
 
 // bump allocator via brk
 static char *_heap = NULL;

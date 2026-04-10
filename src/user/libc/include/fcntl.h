@@ -8,7 +8,7 @@
 #define O_APPEND 1 << 3
 #define O_CREAT 1 << 4
 #define O_TRUNC 1 << 5
-#define O_NONBLOCK << 15
+#define O_NONBLOCK 1 << 15
 
 int open(const char *path, int flags, ...);
 int close(int fd);
