@@ -74,6 +74,12 @@ void ISR_handler(Registers* regs);
 //    IMPLEMENTATION PRIVATE FUNCTIONS
 //============================================================================
 
+static inline uintptr_t get_cr2(void) {
+    uintptr_t value;
+    __asm__ volatile ("mov %%cr2, %0" : "=r"(value));
+    return value;
+}
+
 void ISR_handler(Registers* regs)
 {
     if(g_ISR_handlers[regs->interrupt] != NULL)
@@ -92,6 +98,7 @@ void ISR_handler(Registers* regs)
                regs->esp, regs->ebp, regs->eip, regs->eflags, regs->cs, regs->ds, regs->ss);
 
         printf("  interrupt=%x  errorcode=%x\n", regs->interrupt, regs->error);
+        printf("cr2: 0x%x\n", get_cr2());
 
         puts("KERNEL PANIC!\n");
         panic();

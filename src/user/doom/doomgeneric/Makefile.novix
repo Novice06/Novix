@@ -11,8 +11,11 @@ else
 	VB=@
 endif
 
-CFLAGS=-ffreestanding -nostdlib -I $(LIBC)/include
-LDFLAGS=-nostdlib -T linker.ld
+CC=gcc
+#CFLAGS=-ffreestanding -nostdlib  -g -I $(LIBC)/include
+CFLAGS+=-m32 -ggdb -O0 -ffreestanding -I $(LIBC)/include -static -nostdlib -fno-stack-protector -mno-mmx -mno-3dnow -fno-pie
+#LDFLAGS=-nostdlib -T linker.ld
+LDFLAGS+=-Wl,--gc-sections -static -nostdlib -T linker.ld -no-pie
 LIBS+= -lgcc
 
 # subdirectory for objects

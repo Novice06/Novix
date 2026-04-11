@@ -1,9 +1,17 @@
 #pragma once
 #include <stddef.h>
-typedef long ssize_t;
-typedef int pid_t;
+#include <stdbool.h>
+#include <stdio.h>
+
+typedef int ino_t;
 typedef long off_t;
-typedef unsigned long ino_t; // inode num
-typedef unsigned int mode_t;
-typedef unsigned int uid_t;
-typedef unsigned int gid_t;
+
+// structure source: https://stackoverflow.com/a/12991451
+struct dirent {
+    ino_t          d_ino;       /* inode number */
+    off_t          d_off;       /* offset to the next dirent */
+    unsigned short d_reclen;    /* length of this record */
+    unsigned char  d_type;      /* type of file; not supported
+                                   by all file system types */
+    char           d_name[256]; /* filename */
+};

@@ -21,4 +21,11 @@ SECTIONS
         *(.bss*)
         *(COMMON)
     }
+
+    /* Force inclusion of bss section in the file*/
+    .fill :
+    {
+        . = ALIGN(4);
+        BYTE(0)
+    }
 }

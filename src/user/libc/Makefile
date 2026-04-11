@@ -4,7 +4,7 @@ BLD = build
 
 CFLAGS := -ffreestanding -nostdlib -g -I include
 
-SRCS := $(wildcard *.c)
+SRCS := $(wildcard src/*.c)
 OBJS := $(patsubst %.c, $(BLD)/%.o, $(SRCS))
 
 all: $(BLD)/libc.a $(BLD)/crt0.o
@@ -13,6 +13,7 @@ $(BLD)/libc.a: $(OBJS) $(BLD)/_syscall.o
 	$(AR) rcs $@ $^
 
 $(BLD)/%.o: %.c | $(BLD)
+	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BLD)/crt0.o: crt0.asm | $(BLD)

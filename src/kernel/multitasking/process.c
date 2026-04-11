@@ -402,15 +402,35 @@ void* PROCESS_sbrk(intptr_t size)
         return PROCESS_getCurrent()->brk;   // failed
     }
 
-    // uint32_t current_page = (uint32_t)PROCESS_getCurrent()->brk & 0xFFFFFFF8;
-    // uint32_t end_page = ((uint32_t)PROCESS_getCurrent()->brk + size) & 0xFFFFFFF8;
-    uint32_t current_page = (uint32_t)PROCESS_getCurrent()->brk & ~(0x1000 - 1);
-    uint32_t end_page = ((uint32_t)PROCESS_getCurrent()->brk + size) & ~(0x1000 - 1);
-    for(; current_page <= end_page; current_page+=0x1000)
-        VIRTMEM_mapPage((void*)current_page, !PROCESS_getCurrent()->usermode);
+    // log_debug("sbrk", "requested 0x%x, current sbrk: 0x%x, will end at: 0x%x", size, PROCESS_getCurrent()->brk, PROCESS_getCurrent()->brk + size);
+    // // uint32_t current_page = (uint32_t)PROCESS_getCurrent()->brk & 0xFFFFFFF8;
+    // // uint32_t end_page = ((uint32_t)PROCESS_getCurrent()->brk + size) & 0xFFFFFFF8;
+    // uint32_t current_page = (uint32_t)PROCESS_getCurrent()->brk & ~(0x1000 - 1);
+    // uint32_t end_page = ((uint32_t)PROCESS_getCurrent()->brk + size) & ~(0x1000 - 1);
+    // log_debug("sbrk", "current page 0x%x, endpage 0x%x", current_page, end_page);
+    // for(; current_page <= end_page; current_page+=0x1000)
+    //     VIRTMEM_mapPage((void*)current_page, !PROCESS_getCurrent()->usermode);
 
-    PROCESS_getCurrent()->brk += size;
-    return PROCESS_getCurrent()->brk;
+    // PROCESS_getCurrent()->brk += size;
+    // return PROCESS_getCurrent()->brk;
+
+    uint32_t old_brk = PROCESS_getCurrent()->brk;
+    uint32_t new_brk = old_brk + size;
+
+    // 1. Calculer la page de départ (arrondi à la page inférieure)
+    uint32_t start_page = old_brk & ~(0x1000 - 1);
+    // 2. Calculer la page de fin (on veut couvrir jusqu'au dernier octet de new_brk)
+    uint32_t end_page = (new_brk - 1) & ~(0x1000 - 1);
+
+    // 3. On ne mappe que si on a changé de page ou si on progresse
+    if (new_brk > old_brk) {
+        for (uint32_t curr = start_page; curr <= end_page; curr += 0x1000) {
+            VIRTMEM_mapPage((void*)curr, !PROCESS_getCurrent()->usermode);
+        }
+    }
+
+    PROCESS_getCurrent()->brk = (void*)new_brk;
+    return (void*)old_brk; // sbrk retourne l'ANCIENNE valeur
 }
 
 void* PROCESS_createNewRegion(region_type_t type, uint32_t length, uint64_t shm_id)

@@ -84,20 +84,42 @@ int ioctl(int request, void* arg)
         memcpy(arg, &info, sizeof(video_info_t));
         return 0;
 
+    // case FB_BLIT_RECT:
+    //     surface_t* rect = (surface_t*)arg;
+    //     if((rect->x + rect->width) > info.width)
+    //         rect->width = info.width - rect->x;
+
+    //     if((rect->y + rect->height) > info.height)
+    //         rect->height = info.height - rect->y;
+
+    //     for(int y = rect->y; y < rect->height; y++)
+    //     {
+    //         memcpy((void*)info.framebuffer + y * info.pitch + rect->x * info.width, rect->pixels, rect->width * info.bytes_per_pixel);
+    //     }
+
+    //     // memcpy((void*)info.framebuffer + rect->origin.y * info.pitch + rect->origin.x * info.width, rect->pixels, rect->width * rect->height);
+    //     return 0;
+
     case FB_BLIT_RECT:
         surface_t* rect = (surface_t*)arg;
-        if((rect->x + rect->width) > info.width)
-            rect->width = info.width - rect->x;
+        
+        // Sécurité : on ne dessine pas hors écran
+        if(rect->x + rect->width > info.width) rect->width = info.width - rect->x;
+        if(rect->y + rect->height > info.height) rect->height = info.height - rect->y;
 
-        if((rect->y + rect->height) > info.height)
-            rect->height = info.height - rect->y;
+        uint8_t* src = (uint8_t*)rect->pixels;
+        uint32_t line_size = rect->width * info.bytes_per_pixel;
 
-        for(int y = rect->y; y < rect->height; y++)
+        for(int i = 0; i < rect->height; i++)
         {
-            memcpy((void*)info.framebuffer + y * info.pitch + rect->x * info.width, rect->pixels, rect->width * info.bytes_per_pixel);
-        }
+            // Destination : on part du framebuffer + (ligne actuelle * pitch) + (colonne * bpp)
+            void* dest = (void*)(info.framebuffer + (rect->y + i) * info.pitch + (rect->x * info.bytes_per_pixel));
+            
+            // Source : on avance ligne par ligne dans le buffer de l'appli
+            void* source = (void*)(src + i * line_size);
 
-        // memcpy((void*)info.framebuffer + rect->origin.y * info.pitch + rect->origin.x * info.width, rect->pixels, rect->width * rect->height);
+            memcpy(dest, source, line_size);
+        }
         return 0;
     
     default:

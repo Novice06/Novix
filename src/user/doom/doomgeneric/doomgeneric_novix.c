@@ -52,13 +52,18 @@ int keyboard;
 int framebuffer;
 key_event_t event = {0};
 surface_t surface;
+video_info_t vid_info;
 
 void DG_Init()
 {
-    keyboard = open("/dev/keyboard", O_RDONLY | O_NONBLOCK);
-    framebuffer = open("/dev/fb", O_WRONLY);
+    keyboard = open("/dev/keyboard", O_RDONLY | O_NONBLOCK, 0);
+    framebuffer = open("/dev/fb", O_WRONLY, 0);
 
     if(keyboard < 0 || framebuffer < 0) exit(-1);
+
+    __sys_ioctl(framebuffer, 0, &vid_info);
+
+    printf("framebuffer: red_off: %d, green_off: %d, blue_off: %d, bpp: %d\n", vid_info.red_position, vid_info.green_position, vid_info.blue_position, vid_info.bytes_per_pixel);
 
     surface.x = 0;
     surface.y = 0;
@@ -75,7 +80,7 @@ void DG_DrawFrame()
 
 void DG_SleepMs(uint32_t ms)
 {
-    __sys_sleep(ms);
+    // __sys_sleep(ms);
 }
 
 uint32_t DG_GetTicksMs()
@@ -105,7 +110,7 @@ int DG_GetKey(int* pressed, unsigned char* key)
     if(read(keyboard, &event, 1) < 0) return 0;
 
     *pressed = event.modifier_mask & (1 << PRESSED);
-    *key = to_doom_key(event.code);
+    *key = KEY_RIGHTARROW;//to_doom_key(event.code);
 
     return 1;
 }
@@ -117,7 +122,7 @@ void DG_SetWindowTitle(const char * title)
 
 int main()
 {
-    doomgeneric_Create(1, (char*[]){"/", NULL});
+    doomgeneric_Create(0, (char*[]){"/", NULL});
 
     while (1)
     {

@@ -388,28 +388,64 @@ size_t VFS_seek(int fd, int64_t offset, int whence)
 	if(!is_fd_valid(fd))
 		return VFS_EBADF;
 
-	switch (whence)
-	{
-	case VFS_SEEK_SET:
-		PROCESS_getCurrent()->resources[fd].position = offset;
-		break;
+	// switch (whence)
+	// {
+	// case VFS_SEEK_SET:
+	// 	PROCESS_getCurrent()->resources[fd].position = offset;
+	// 	break;
 	
-	case VFS_SEEK_CUR:
-		PROCESS_getCurrent()->resources[fd].position += offset;
-		break;
+	// case VFS_SEEK_CUR:
+	// 	PROCESS_getCurrent()->resources[fd].position += offset;
+	// 	break;
 
-	case VFS_SEEK_END:
-		uint64_t file_size;
-		vfs_stat_t info;
-		PROCESS_getCurrent()->resources[fd].vnode->vnode_op->stat(PROCESS_getCurrent()->resources[fd].vnode, &info);
-		PROCESS_getCurrent()->resources[fd].position = info.size + offset;
-		break;
+	// case VFS_SEEK_END:
+	// 	uint64_t file_size;
+	// 	vfs_stat_t info;
+	// 	PROCESS_getCurrent()->resources[fd].vnode->vnode_op->stat(PROCESS_getCurrent()->resources[fd].vnode, &info);
+	// 	PROCESS_getCurrent()->resources[fd].position = info.size + offset;
+	// 	break;
 	
-	default:
-		break;
-	}
+	// default:
+	// 	break;
+	// }
 
-	return PROCESS_getCurrent()->resources[fd].position;
+	// return PROCESS_getCurrent()->resources[fd].position;
+
+	int64_t new_pos = PROCESS_getCurrent()->resources[fd].position;
+    uint64_t file_size = 0;
+    
+    // On récupère la taille pour les checks (indispensable pour SEEK_END)
+    vfs_stat_t info;
+    PROCESS_getCurrent()->resources[fd].vnode->vnode_op->stat(
+        PROCESS_getCurrent()->resources[fd].vnode, &info);
+    file_size = info.size;
+
+    switch (whence)
+    {
+        case VFS_SEEK_SET:
+            new_pos = offset;
+            break;
+        
+        case VFS_SEEK_CUR:
+            new_pos += offset;
+            break;
+
+        case VFS_SEEK_END:
+            new_pos = (int64_t)file_size + offset;
+            break;
+        
+        default:
+            return -1;
+    }
+
+    // --- LE CHECK DE SECURITE ---
+    if (new_pos < 0) return -1; // On ne peut pas chercher avant le début !
+    
+    // Optionnel : On peut autoriser de chercher après la fin (Sparse files), 
+    // mais pour DOOM, il vaut mieux limiter à file_size pour éviter le garbage.
+    
+    PROCESS_getCurrent()->resources[fd].position = new_pos;
+    return new_pos;
 }
 
 int VFS_mkdir(const char* path, uint16_t mode)

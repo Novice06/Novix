@@ -9,7 +9,7 @@ all: clean $(OUT)
 
 $(OUT): main.o $(LIBC)/build/crt0.o $(LIBC)/build/libc.a
 	mkdir -p $(@D)
-	$(LD) $(LDFLAGS) $(LIBC)/build/crt0.o main.o $(LIBC)/build/libc.a -o $@ -Map foo.map
+	$(CC) $(LDFLAGS) $(LIBC)/build/crt0.o main.o $(LIBC)/build/libc.a -o $@ -lgcc -Wl,-Map,foo.map
 
 main.o: main.c
 	$(CC) $(CFLAGS) -c $< -o $@

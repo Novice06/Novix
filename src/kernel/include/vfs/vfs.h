@@ -57,9 +57,9 @@ typedef enum
 
 typedef enum
 {
-    VFS_SEEK_SET = 1 << 0,
-    VFS_SEEK_CUR = 1 << 1,
-    VFS_SEEK_END = 1 << 2,
+    VFS_SEEK_SET,
+    VFS_SEEK_CUR,
+    VFS_SEEK_END,
 } vfs_whence_t;
 
 

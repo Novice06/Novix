@@ -1,28 +1,30 @@
 #pragma once
-
-#pragma once
 #include <stddef.h>
+#include <stdint.h>
 
-void *malloc(size_t n);
-void *calloc(size_t nmemb, size_t size);
-void *realloc(void *ptr, size_t n);
-void free (void *ptr);
+typedef struct HeapPool HeapPool;
 
-void exit(int status) __attribute__((noreturn));
-void abort(void)       __attribute__((noreturn));
+struct HeapPool {
+    uint8_t   verify;
+    HeapPool *next;
+    size_t    size;
+    size_t    required_size;
+    uint8_t   free;
+    uint8_t   data[0];
+} __attribute__((packed));
 
+void *malloc(size_t size);
+void free(void *addr);
+void exit(int status);
+void *calloc(size_t nmemb, size_t sz);
+void* realloc(void *addr, size_t sz);
 double atof(const char *nptr);
-int atoi(const char *s);
-long atol(const char *s);
-long strtol(const char *s, char **end, int base);
-
-int system(char *command);
-
-int  abs(int x);
-long labs(long x);
-
-// for screen clear command
-//int system(const char *cmd);
-
-#define EXIT_SUCCESS 0
-#define EXIT_FAILURE 1
+int atoi(const char *nptr);
+int system(const char *command);
+char *getenv(char *key);
+int setenv(char *key, char *val, int overwrite);
+int abs(int j);
+int atexit(void* fn);
+void abort(void);
+long strtol(const char *nptr,
+                   char **endptr, int base);
